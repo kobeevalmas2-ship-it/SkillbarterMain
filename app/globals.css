@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { --bg:#f7f2e8; --card:#fffdf6; --ink:#111; --acc:#3346e0; --sh:#111; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#15151a; --card:#1e1e26; --ink:#f5f1e6; --acc:#8c9bff; --sh:#f5f1e6; }
+}
+body { background: var(--bg); color: var(--ink); }
+:focus-visible { outline: 3px solid #3346e0; outline-offset: 2px; }
+
+@layer components {
+  .sh  { box-shadow: 5px 5px 0 var(--sh); }
+  .shs { box-shadow: 3px 3px 0 var(--sh); }
+  .btn { @apply border-2 border-ink font-bold px-4 py-2.5 text-k cursor-pointer transition-transform; box-shadow: 3px 3px 0 var(--sh); }
+  .btn:hover { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--sh); }
+  .lbl { @apply font-mono text-[11px] font-bold uppercase tracking-wide; }
+  .fld { @apply w-full border-2 border-ink bg-card text-ink px-3 py-2.5; }
+  .fld:focus { outline: 3px solid #3346e0; }
+  .nav-on { background: #ffe45c; color: #111; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
