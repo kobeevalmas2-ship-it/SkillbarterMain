@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Art from "@/components/Art";
+import Reviews from "@/components/Reviews";
 import OpenModalButton from "@/components/OpenModalButton";
 import { CATS } from "@/components/data";
 
@@ -64,6 +65,7 @@ export default function Home() {
           ))}
         </div>
       </section>
+      <Reviews />
     </>
   );
 }
