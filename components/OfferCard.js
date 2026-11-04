@@ -1,9 +1,15 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
+import { useAuth } from "./AuthContext";
+import { DEMO_PARTICIPANTS } from "@/lib/wallet.mjs";
 import Art from "./Art";
 
 export default function OfferCard({ o, heart = false }) {
   const [liked, setLiked] = useState(false);
+  const { user } = useAuth();
+  const recipient = o.email || DEMO_PARTICIPANTS.find((account) => account.name === o.n)?.email;
+  const paymentParams = new URLSearchParams({ recipient: recipient || "", service: o.t, minutes: String(Number(o.min.split("–")[0]) || 30) });
   return (
     <article className="bg-card text-ink border-2 border-ink sh">
       <div className="relative">
@@ -32,6 +38,8 @@ export default function OfferCard({ o, heart = false }) {
           </span>
           <span>★ Новый</span>
         </div>
+        {recipient && (recipient === user?.email ? <p className="lbl mt-4 text-ink/60">Ваша услуга</p> :
+          <Link href={`/wallet?${paymentParams}`} className="btn bg-y block mt-4 text-center text-sm">Оплатить минутами ↗</Link>)}
       </div>
     </article>
   );

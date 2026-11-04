@@ -21,7 +21,8 @@ export default function LoginPage() {
       const values = Object.fromEntries(data.entries());
       if (isRegister) register(values);
       else login(values);
-      router.push("/");
+      const next = new URLSearchParams(window.location.search).get("next");
+      router.push(next === "/wallet" || next?.startsWith("/wallet?") ? next : "/");
     } catch (err) {
       setError(err.message || "Қате орын алды. Қайта көріңіз.");
       setBusy(false);

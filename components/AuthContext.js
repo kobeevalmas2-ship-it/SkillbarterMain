@@ -11,13 +11,21 @@ export function AuthProvider({ children }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    try {
-      const session = localStorage.getItem(SESSION_KEY);
-      if (session) setUser(JSON.parse(session));
-    } catch {
-      localStorage.removeItem(SESSION_KEY);
+    function restoreSession() {
+      try {
+        const session = localStorage.getItem(SESSION_KEY);
+        setUser(session ? JSON.parse(session) : null);
+      } catch {
+        setUser(null);
+      }
+      setReady(true);
     }
-    setReady(true);
+    restoreSession();
+    const onStorage = (event) => {
+      if (!event.key || event.key === SESSION_KEY) restoreSession();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   function register({ name, email, password }) {

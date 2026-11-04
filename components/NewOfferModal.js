@@ -3,9 +3,11 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useOffers } from "./OffersContext";
 import { CATS } from "./data";
+import { useAuth } from "./AuthContext";
 
 export default function NewOfferModal() {
   const { add, closeModal } = useOffers();
+  const { user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -19,7 +21,7 @@ export default function NewOfferModal() {
     const f = Object.fromEntries(new FormData(e.currentTarget));
     add({
       cat: f.cat || "Другое", t: f.t, d: f.d || "Описание пока не добавлено.",
-      f: f.f, l: f.l, min: `${f.m1}–${f.m2}`, n: "Айару Кайрат", i: "АК", city: f.city, v: +f.m2,
+      f: f.f, l: f.l, min: `${f.m1}–${f.m2}`, n: user?.name || "Участник", i: (user?.name || "У").slice(0, 2).toUpperCase(), email: user?.email, city: f.city, v: +f.m2,
     });
     closeModal();
     router.push("/services");
