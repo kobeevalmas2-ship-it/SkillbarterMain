@@ -15,11 +15,13 @@ export default function RootLayout({ children }) {
   return (
     <html lang="ru" className={`${inter.variable} ${head.variable} ${mono.variable}`}>
       <body className="font-sans antialiased">
-        <OffersProvider>
-          <Header />
-          <main>{children}</main>
-          <Footer />
-        </OffersProvider>
+        <AuthProvider>
+          <OffersProvider>
+            <Header />
+            <main>{children}</main>
+            <Footer />
+          </OffersProvider>
+        </AuthProvider>
       </body>
     </html>
   );
