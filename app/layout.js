@@ -1,6 +1,7 @@
 import { Inter, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { OffersProvider } from "@/components/OffersContext";
+import { AuthProvider } from "@/components/AuthContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
