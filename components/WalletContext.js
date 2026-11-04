@@ -3,6 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useAuth } from "./AuthContext";
 import { WALLET_KEY, DEMO_PARTICIPANTS, balanceFor, createTransfer, emptyLedger, ensureAccount, historyFor, normalizeEmail, readLedger } from "@/lib/wallet.mjs";
+import { allOffers, readCatalog, serviceQuote } from "@/lib/catalog.mjs";
+import { OFFERS } from "./data";
 
 const WalletContext = createContext(null);
 
@@ -63,6 +65,11 @@ export function WalletProvider({ children }) {
     return withWalletLock(() => {
       const session = JSON.parse(localStorage.getItem("skillbarter-session") || "null");
       if (session?.email !== user.email) throw new Error("Аккаунт изменился. Обновите страницу и войдите снова.");
+      if (values.offerId) {
+        const offer = allOffers(readCatalog(localStorage), OFFERS).find((item) => item.id === values.offerId);
+        const quote = serviceQuote(offer, values.minutes);
+        if (quote.to !== values.to || quote.note !== values.note || values.type !== "service") throw new Error("Условия услуги изменились. Обновите страницу и проверьте оплату.");
+      }
       let ledger = ensureAccount(readLedger(localStorage), user);
       const participants = readParticipants(ledger);
       const recipient = participants.find((account) => account.email === normalizeEmail(values.to));

@@ -1,28 +1,20 @@
 "use client";
-import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "./AuthContext";
-import { DEMO_PARTICIPANTS } from "@/lib/wallet.mjs";
+import { useOffers } from "./OffersContext";
+import FavoriteButton from "./FavoriteButton";
 import Art from "./Art";
 
-export default function OfferCard({ o, heart = false }) {
-  const [liked, setLiked] = useState(false);
+export default function OfferCard({ o }) {
   const { user } = useAuth();
-  const recipient = o.email || DEMO_PARTICIPANTS.find((account) => account.name === o.n)?.email;
-  const paymentParams = new URLSearchParams({ recipient: recipient || "", service: o.t, minutes: String(Number(o.min.split("–")[0]) || 30) });
+  const { openModal } = useOffers();
+  const own = user?.email === o.email;
   return (
-    <article className="bg-card text-ink border-2 border-ink sh">
-      <div className="relative">
+    <article className="relative bg-card text-ink border-2 border-ink sh flex flex-col">
+      <Link href={`/offers/${o.id}`} className="absolute inset-0 z-[1]" aria-label={`Подробнее: ${o.t}`} />
+      <div>
         <Art cat={o.cat} />
-        {heart && (
-          <button
-            onClick={() => setLiked(!liked)}
-            aria-label="В избранное"
-            className={`absolute right-3 top-3 w-9 h-9 text-k border-2 border-ink grid place-items-center ${liked ? "bg-co" : "bg-white"}`}
-          >
-            {liked ? "♥" : "♡"}
-          </button>
-        )}
+        <div className="absolute right-3 top-3 z-10"><FavoriteButton offer={o} compact /></div>
       </div>
       <div className="p-5">
         <div className="flex justify-between lbl"><span>{o.cat}</span><span>◷ {o.min} мин</span></div>
@@ -38,8 +30,8 @@ export default function OfferCard({ o, heart = false }) {
           </span>
           <span>★ Новый</span>
         </div>
-        {recipient && (recipient === user?.email ? <p className="lbl mt-4 text-ink/60">Ваша услуга</p> :
-          <Link href={`/wallet?${paymentParams}`} className="btn bg-y block mt-4 text-center text-sm">Оплатить минутами ↗</Link>)}
+        <p className="bg-y text-k border-2 border-ink p-2.5 mt-4 text-center text-sm font-bold">{own ? "Подробнее об услуге ↗" : "Подробнее и оплата ↗"}</p>
+        {own && <button type="button" onClick={() => openModal(o)} className="relative z-10 border-2 border-ink w-full mt-3 px-3 py-2 text-sm font-bold">Редактировать</button>}
       </div>
     </article>
   );

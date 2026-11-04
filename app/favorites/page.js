@@ -1,0 +1,28 @@
+"use client";
+
+import Link from "next/link";
+import { useAuth } from "@/components/AuthContext";
+import { useOffers } from "@/components/OffersContext";
+import OfferCard from "@/components/OfferCard";
+
+export default function FavoritesPage() {
+  const { user, ready: authReady } = useAuth();
+  const { favorites, ready, error } = useOffers();
+  return <section className="max-w-6xl mx-auto px-4 py-10 md:py-14">
+    <span className="lbl bg-pu text-k border-2 border-ink px-2 py-1 inline-block">Сохраните на потом</span>
+    <h1 className="font-head font-extrabold text-4xl md:text-6xl tracking-tight mt-4">Избранное</h1>
+    <p className="mt-3 text-ink/65">Услуги, к которым хочется вернуться. Нажмите на сердечко в карточке, чтобы сохранить их здесь.</p>
+    {!authReady || !ready ? <p role="status" className="mt-8">Загружаем избранное…</p> : !user ? <div className="bg-card border-2 border-ink p-7 mt-8 shs">
+      <h2 className="font-head font-extrabold text-2xl">Войдите, чтобы сохранять услуги</h2>
+      <p className="mt-3 text-ink/65">У каждого участника свой список избранного.</p>
+      <Link href="/login?next=/favorites" className="btn bg-y inline-block mt-5">Войти в аккаунт ↗</Link>
+    </div> : error ? <p role="alert" className="mt-8 bg-co text-k border-2 border-ink p-4">{error}</p> : favorites.length ? <>
+      <p className="text-sm text-ink/60 mt-7">Сохранено услуг: {favorites.length}</p>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-7 mt-4">{favorites.map((offer) => <OfferCard key={offer.id} o={offer} />)}</div>
+    </> : <div className="border-2 border-dashed border-ink p-8 sm:p-14 text-center mt-8">
+      <span aria-hidden="true" className="text-5xl">♡</span><h2 className="font-head font-extrabold text-2xl mt-4">Пока ничего не сохранено</h2>
+      <p className="text-ink/65 mt-2">Найдите интересную услугу и добавьте её в избранное.</p>
+      <Link href="/find" className="btn bg-y inline-block mt-6">Найти помощь ↗</Link>
+    </div>}
+  </section>;
+}

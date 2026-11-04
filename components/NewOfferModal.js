@@ -1,66 +1,96 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useOffers } from "./OffersContext";
 import { CATS } from "./data";
-import { useAuth } from "./AuthContext";
 
-export default function NewOfferModal() {
-  const { add, closeModal } = useOffers();
-  const { user } = useAuth();
+export default function NewOfferModal({ offer }) {
+  const { add, update, closeModal } = useOffers();
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const pending = useRef(false);
+  const form = useRef(null);
   const router = useRouter();
 
   useEffect(() => {
-    const onKey = (e) => e.key === "Escape" && closeModal();
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    form.current?.querySelector("input")?.focus();
+    const onKey = (e) => {
+      if (e.key === "Escape" && !pending.current) closeModal();
+      if (e.key !== "Tab") return;
+      const fields = [...form.current.querySelectorAll("button, input, textarea, select")].filter((field) => !field.disabled);
+      const first = fields[0], last = fields[fields.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus?.isConnected) previousFocus.focus();
+    };
   }, [closeModal]);
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
+    if (pending.current) return;
     const f = Object.fromEntries(new FormData(e.currentTarget));
-    add({
-      cat: f.cat || "Другое", t: f.t, d: f.d || "Описание пока не добавлено.",
-      f: f.f, l: f.l, min: `${f.m1}–${f.m2}`, n: user?.name || "Участник", i: (user?.name || "У").slice(0, 2).toUpperCase(), email: user?.email, city: f.city, v: +f.m2,
-    });
-    closeModal();
-    router.push("/services");
+    pending.current = true;
+    setBusy(true);
+    setError("");
+    try {
+      if (offer) await update(offer.id, f);
+      else {
+        const id = await add(f);
+        router.push(`/offers/${id}`);
+      }
+      closeModal();
+    } catch (err) {
+      setError(err.message || "Не удалось сохранить услугу.");
+    } finally {
+      pending.current = false;
+      setBusy(false);
+    }
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 overflow-y-auto p-4" role="dialog" aria-modal="true"
-         onClick={(e) => e.target === e.currentTarget && closeModal()}>
-      <form onSubmit={submit} className="relative bg-card text-ink border-2 border-ink max-w-xl mx-auto my-6 p-6" style={{ boxShadow: "10px 10px 0 #3346e0" }}>
+    <div className="fixed inset-0 z-50 bg-black/60 overflow-y-auto p-4" role="dialog" aria-modal="true" aria-labelledby="offer-editor-title"
+         onClick={(e) => e.target === e.currentTarget && !pending.current && closeModal()}>
+      <form ref={form} onSubmit={submit} aria-busy={busy} className="relative bg-card text-ink border-2 border-ink max-w-xl mx-auto my-6 p-5 sm:p-6" style={{ boxShadow: "6px 6px 0 #3346e0" }}>
         <div className="flex justify-between items-start gap-4">
-          <h2 className="font-head font-extrabold text-3xl tracking-tight">Новое предложение</h2>
-          <button type="button" onClick={closeModal} aria-label="Закрыть" className="w-9 h-9 bg-co text-k border-2 border-ink font-bold">×</button>
+          <h2 id="offer-editor-title" className="font-head font-extrabold text-3xl tracking-tight">{offer ? "Редактировать услугу" : "Новое предложение"}</h2>
+          <button type="button" onClick={closeModal} disabled={busy} aria-label="Закрыть" className="shrink-0 w-9 h-9 bg-co text-k border-2 border-ink font-bold">×</button>
         </div>
         <p className="mt-3 text-ink/70">Поделитесь навыком, который поможет другому человеку.</p>
 
         <label className="lbl block mt-5 mb-1" htmlFor="t">Название</label>
-        <input id="t" name="t" className="fld" placeholder="Например, основы Figma" required autoFocus />
+        <input id="t" name="t" className="fld" placeholder="Например, основы Figma" defaultValue={offer?.t || ""} required minLength={3} maxLength={120} disabled={busy} />
 
         <label className="lbl block mt-4 mb-1" htmlFor="d">Описание</label>
-        <textarea id="d" name="d" rows={4} className="fld" placeholder="Расскажите, чему научите и как пройдёт встреча" />
+        <textarea id="d" name="d" rows={4} className="fld" placeholder="Расскажите, чему научите и как пройдёт встреча" defaultValue={offer?.d || ""} required minLength={10} maxLength={3000} disabled={busy} />
 
-        <div className="grid grid-cols-2 gap-4 mt-4">
+        <div className="grid sm:grid-cols-2 gap-4 mt-4">
           <div><label className="lbl block mb-1" htmlFor="cat">Категория</label>
-            <select id="cat" name="cat" className="fld"><option value="">Выберите</option>{CATS.map((c) => <option key={c[0]}>{c[0]}</option>)}</select></div>
+            <select id="cat" name="cat" className="fld" defaultValue={offer?.cat || ""} required disabled={busy}><option value="">Выберите</option>{CATS.map((c) => <option key={c[0]}>{c[0]}</option>)}</select></div>
           <div><label className="lbl block mb-1" htmlFor="l">Уровень</label>
-            <select id="l" name="l" className="fld"><option>Начинающий</option><option>Средний</option><option>Продвинутый</option></select></div>
+            <select id="l" name="l" className="fld" defaultValue={offer?.l || "Начинающий"} disabled={busy}><option>Начинающий</option><option>Средний</option><option>Продвинутый</option></select></div>
           <div><label className="lbl block mb-1" htmlFor="f">Формат</label>
-            <select id="f" name="f" className="fld"><option>Онлайн</option><option>Офлайн</option></select></div>
+            <select id="f" name="f" className="fld" defaultValue={offer?.f || "Онлайн"} disabled={busy}><option>Онлайн</option><option>Офлайн</option></select></div>
           <div><label className="lbl block mb-1" htmlFor="city">Город для офлайн встреч</label>
-            <input id="city" name="city" className="fld" placeholder="Алматы" /></div>
+            <input id="city" name="city" className="fld" placeholder="Алматы" defaultValue={offer?.city || ""} maxLength={80} disabled={busy} /></div>
           <div><label className="lbl block mb-1" htmlFor="m1">От, минут</label>
-            <select id="m1" name="m1" className="fld"><option>30</option><option>60</option></select></div>
+            <input id="m1" name="m1" type="number" min="15" max="480" step="1" required defaultValue={offer?.m1 || 30} className="fld" disabled={busy} /></div>
           <div><label className="lbl block mb-1" htmlFor="m2">До, минут</label>
-            <select id="m2" name="m2" className="fld" defaultValue="120"><option>60</option><option>120</option><option>180</option></select></div>
+            <input id="m2" name="m2" type="number" min="15" max="480" step="1" required defaultValue={offer?.m2 || 120} className="fld" disabled={busy} /></div>
         </div>
 
         <label className="lbl block mt-4 mb-1" htmlFor="lg">Язык общения</label>
-        <input id="lg" name="lg" className="fld" defaultValue="Русский" />
-        <button className="btn bg-b text-white w-full mt-5">Опубликовать предложение</button>
+        <input id="lg" name="lg" className="fld" defaultValue={offer?.lg || "Русский"} required maxLength={80} disabled={busy} />
+        {error && <p role="alert" className="bg-co text-k border-2 border-ink p-3 mt-4 text-sm">{error}</p>}
+        <button disabled={busy} className="btn bg-b !text-white w-full mt-5 disabled:opacity-50">{busy ? "Сохраняем…" : offer ? "Сохранить изменения" : "Опубликовать предложение"}</button>
+        <button type="button" disabled={busy} onClick={closeModal} className="w-full mt-4 underline text-sm underline-offset-4">Отмена</button>
       </form>
     </div>
   );

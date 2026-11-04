@@ -182,7 +182,7 @@ function WalletDashboard({ user, initialRecipient, initialMinutes, initialServic
                   </div>
                   <p className="text-sm mt-1 break-words">{counterpart ? `${incoming ? "От" : "Кому"}: ${participantName(counterpart)}` : "Добро пожаловать в SkillBarter"}</p>
                   {counterpart && <p className="text-xs text-ink/55 break-all mt-1">{counterpart}</p>}
-                  <p className="text-sm text-ink/65 mt-2 break-words">{tx.note || "Перевод минут"}</p>
+                  <p className="text-sm text-ink/65 mt-2 break-words">{tx.offerId ? <Link href={`/offers/${tx.offerId}`} className="underline underline-offset-4">{tx.note}</Link> : tx.note || "Перевод минут"}</p>
                   <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink/60 mt-3"><time dateTime={tx.createdAt}>{dateFormat.format(new Date(tx.createdAt))}</time><span>✓ Выполнено</span></div>
                   <details className="mt-2 text-xs text-ink/55"><summary className="cursor-pointer">Номер операции</summary><p className="font-mono break-all mt-1 select-all">{tx.id}</p></details>
                 </div>

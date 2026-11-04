@@ -3,19 +3,19 @@ import { useState } from "react";
 import OfferCard from "@/components/OfferCard";
 import OpenModalButton from "@/components/OpenModalButton";
 import { useOffers } from "@/components/OffersContext";
-import { CATS, OFFERS } from "@/components/data";
+import { CATS } from "@/components/data";
 
 const fieldCls = "fld !text-k !bg-[#fffdf6]";
 
 export default function FindClient({ initialCat }) {
-  const { mine } = useOffers();
+  const { all, ready, error } = useOffers();
   const [q, setQ] = useState("");
   const [cat, setCat] = useState(initialCat);
   const [fmt, setFmt] = useState("");
   const [city, setCity] = useState("");
   const [sort, setSort] = useState("new");
 
-  let list = [...mine, ...OFFERS].filter(
+  let list = all.filter(
     (o) =>
       (!cat || o.cat === cat) &&
       (!fmt || o.f === fmt) &&
@@ -49,10 +49,11 @@ export default function FindClient({ initialCat }) {
         </select>
       </div>
 
-      <p className="mt-6 text-sm text-ink/70">Найдено предложений: {list.length}</p>
+      {error && <p role="alert" className="bg-co text-k border-2 border-ink p-3 mt-6">{error}</p>}
+      <p className="mt-6 text-sm text-ink/70" role="status">{ready ? `Найдено предложений: ${list.length}` : "Загружаем услуги…"}</p>
       {list.length ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-7 mt-4">
-          {list.map((o, i) => <OfferCard key={i} o={o} heart />)}
+          {list.map((o) => <OfferCard key={o.id} o={o} />)}
         </div>
       ) : (
         <div className="mt-4 border-2 border-dashed border-ink p-10 text-center text-ink/70">

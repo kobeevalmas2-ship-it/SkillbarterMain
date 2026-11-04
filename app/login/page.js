@@ -22,7 +22,8 @@ export default function LoginPage() {
       if (isRegister) register(values);
       else login(values);
       const next = new URLSearchParams(window.location.search).get("next");
-      router.push(next === "/wallet" || next?.startsWith("/wallet?") ? next : "/");
+      const safeNext = typeof next === "string" && /^\/(?:wallet|services|favorites|offers\/[a-zA-Z0-9-]+)(?:\?|$)/.test(next);
+      router.push(safeNext ? next : "/");
     } catch (err) {
       setError(err.message || "Қате орын алды. Қайта көріңіз.");
       setBusy(false);
