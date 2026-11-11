@@ -4,8 +4,10 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthContext";
 import { useOffers } from "./OffersContext";
+import { useLanguage } from "./LanguageContext";
 
 export default function FavoriteButton({ offer, compact = false }) {
+  const { t } = useLanguage();
   const { user, ready: authReady } = useAuth();
   const { favoriteIds, setFavorite, ready } = useOffers();
   const router = useRouter();
@@ -26,11 +28,11 @@ export default function FavoriteButton({ offer, compact = false }) {
   }
 
   return <div className="relative z-10">
-    <button type="button" aria-label={selected ? "Убрать из избранного" : "Добавить в избранное"} aria-pressed={selected}
+    <button type="button" aria-label={t(selected ? "Убрать из избранного" : "Добавить в избранное")} aria-pressed={selected}
       disabled={!ready || !authReady || busy} onClick={toggle}
       className={`border-2 border-ink text-k font-bold disabled:opacity-50 ${selected ? "bg-co" : "bg-y"} ${compact ? "w-10 h-10 grid place-items-center text-xl" : "px-4 py-2.5"}`}>
-      {selected ? "♥" : "♡"}{!compact && <span className="ml-2">{selected ? "В избранном" : "В избранное"}</span>}
+      {selected ? "♥" : "♡"}{!compact && <span className="ml-2">{t(selected ? "В избранном" : "В избранное")}</span>}
     </button>
-    {error && <p role="alert" className={`${compact ? "absolute top-12 right-0 w-56" : "mt-2"} bg-card border-2 border-ink p-2 text-xs text-ink`}>{error}</p>}
+    {error && <p role="alert" className={`${compact ? "absolute top-12 right-0 w-56" : "mt-2"} bg-card border-2 border-ink p-2 text-xs text-ink`}>{t(error)}</p>}
   </div>;
 }
