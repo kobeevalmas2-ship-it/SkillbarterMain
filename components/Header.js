@@ -28,7 +28,7 @@ export default function Header() {
             <div className="flex items-center gap-2 text-sm font-semibold">
               <span className="hidden sm:grid w-9 h-9 bg-pu text-k border-2 border-ink place-items-center text-xs font-bold" title={user.name}>{user.name.slice(0, 2).toUpperCase()}</span>
               <span className="hidden 2xl:inline max-w-[100px] truncate">{user.name}</span>
-              <button className="text-xs underline underline-offset-2" onClick={logout}>Шығу</button>
+              <button className="text-xs underline underline-offset-2" onClick={logout}>Выйти</button>
             </div>
           ) : <Link href="/login" className="btn bg-y !px-3 !py-1.5 text-sm">Войти</Link>}
         </div>
