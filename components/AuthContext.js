@@ -32,7 +32,7 @@ export function AuthProvider({ children }) {
     const users = JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
     const normalizedEmail = email.trim().toLowerCase();
     if (users.some((item) => item.email === normalizedEmail)) {
-      throw new Error("Бұл электрондық пошта тіркелген. Кіруді пайдаланыңыз.");
+      throw new Error("Этот адрес электронной почты уже зарегистрирован. Войдите в аккаунт.");
     }
     const account = { name: name.trim(), email: normalizedEmail, password };
     localStorage.setItem(USERS_KEY, JSON.stringify([...users, account]));
@@ -44,7 +44,7 @@ export function AuthProvider({ children }) {
   function login({ email, password }) {
     const users = JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
     const account = users.find((item) => item.email === email.trim().toLowerCase() && item.password === password);
-    if (!account) throw new Error("Электрондық пошта немесе құпиясөз қате.");
+    if (!account) throw new Error("Неверный адрес электронной почты или пароль.");
     const profile = { name: account.name, email: account.email };
     localStorage.setItem(SESSION_KEY, JSON.stringify(profile));
     setUser(profile);

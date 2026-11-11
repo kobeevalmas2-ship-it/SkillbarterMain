@@ -30,7 +30,7 @@ export default function Header() {
               <span className="hidden 2xl:inline max-w-[100px] truncate">{user.name}</span>
               <button className="text-xs underline underline-offset-2" onClick={logout}>Шығу</button>
             </div>
-          ) : <Link href="/login" className="btn bg-y !px-3 !py-1.5 text-sm">Кіру</Link>}
+          ) : <Link href="/login" className="btn bg-y !px-3 !py-1.5 text-sm">Войти</Link>}
         </div>
       </div>
       <nav className="xl:hidden flex gap-1 px-4 pb-2 text-xs font-semibold overflow-x-auto">{links("")}</nav>
