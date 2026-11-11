@@ -2,53 +2,170 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useOffers } from "./OffersContext";
+import { useAuth } from "./AuthContext";
 import { CATS } from "./data";
 import { useLanguage } from "./LanguageContext";
+import { clearOfferDraft, offerEditorChanged, offerEditorValues, readOfferDraft, validateOfferEditor, writeOfferDraft } from "@/lib/offer-draft.mjs";
 
 export default function NewOfferModal({ offer }) {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const { add, update, closeModal } = useOffers();
+  const initial = useRef(offerEditorValues(offer));
+  const [values, setValues] = useState(initial.current);
   const [error, setError] = useState("");
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
   const [busy, setBusy] = useState(false);
+  const [draftReady, setDraftReady] = useState(false);
+  const [draftStatus, setDraftStatus] = useState("");
+  const [draftWarning, setDraftWarning] = useState("");
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [savedId, setSavedId] = useState(null);
   const pending = useRef(false);
+  const dirty = useRef(false);
   const form = useRef(null);
+  const confirmation = useRef(null);
+  const closeTrigger = useRef(null);
+  const requestCloseRef = useRef(null);
   const router = useRouter();
+  const disabled = busy || !draftReady || confirmClose || Boolean(savedId);
+
+  useEffect(() => {
+    try {
+      const draft = readOfferDraft(localStorage, user.email, offer?.id);
+      if (draft && offerEditorChanged(initial.current, draft)) {
+        setValues(draft);
+        dirty.current = true;
+        setDraftStatus("Черновик восстановлен. Можно продолжить заполнение.");
+      }
+    } catch (err) {
+      setDraftWarning(err.message === "Не удалось восстановить черновик. Проверьте заполнение формы."
+        ? err.message : "Не удалось открыть черновик. Автосохранение может быть недоступно.");
+    }
+    setDraftReady(true);
+  }, [user.email, offer?.id]);
 
   useEffect(() => {
     const previousFocus = document.activeElement;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    form.current?.querySelector("input")?.focus();
     const onKey = (e) => {
-      if (e.key === "Escape" && !pending.current) closeModal();
+      if (e.key === "Escape") {
+        e.preventDefault();
+        if (pending.current) return;
+        if (confirmation.current) {
+          setConfirmClose(false);
+        } else requestCloseRef.current?.();
+      }
       if (e.key !== "Tab") return;
-      const fields = [...form.current.querySelectorAll("button, input, textarea, select")].filter((field) => !field.disabled);
+      const root = confirmation.current || form.current;
+      const fields = [...root.querySelectorAll("button, input, textarea, select")].filter((field) => !field.disabled && !field.closest("fieldset:disabled"));
       const first = fields[0], last = fields[fields.length - 1];
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      if (!first) { e.preventDefault(); return; }
+      if (!root.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+      else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     };
+    const onUnload = (event) => {
+      if (!dirty.current) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
     document.addEventListener("keydown", onKey);
+    window.addEventListener("beforeunload", onUnload);
     return () => {
       document.removeEventListener("keydown", onKey);
+      window.removeEventListener("beforeunload", onUnload);
       document.body.style.overflow = previousOverflow;
       if (previousFocus?.isConnected) previousFocus.focus();
     };
-  }, [closeModal]);
+  }, []);
+
+  useEffect(() => {
+    if (draftReady) form.current?.querySelector("input")?.focus();
+  }, [draftReady]);
+
+  useEffect(() => {
+    if (confirmClose) confirmation.current?.querySelector("button")?.focus();
+    else if (closeTrigger.current?.isConnected) closeTrigger.current.focus();
+  }, [confirmClose]);
+
+  function requestClose() {
+    if (pending.current || confirmClose) return;
+    if (!dirty.current) { closeModal(); return; }
+    closeTrigger.current = document.activeElement;
+    setConfirmClose(true);
+  }
+  requestCloseRef.current = requestClose;
+
+  function change(event) {
+    const next = { ...values, [event.target.name]: event.target.value };
+    setValues(next);
+    setError("");
+    setErrors(validateOfferEditor(next));
+    dirty.current = offerEditorChanged(initial.current, next);
+    try {
+      if (dirty.current) writeOfferDraft(localStorage, user.email, offer?.id, next);
+      else clearOfferDraft(localStorage, user.email, offer?.id);
+      setDraftWarning("");
+      setDraftStatus(dirty.current ? "Черновик сохранён в этом браузере." : "");
+    } catch {
+      setDraftStatus("");
+      setDraftWarning("Не удалось сохранить черновик. Не закрывайте форму, чтобы не потерять изменения.");
+    }
+  }
+
+  function blur(event) {
+    setTouched((current) => ({ ...current, [event.target.name]: true }));
+    setErrors(validateOfferEditor(values));
+  }
+
+  function fieldProps(name, description) {
+    const invalid = Boolean(touched[name] && errors[name]);
+    return {
+      id: `offer-${name}`, name, value: values[name], onChange: change, onBlur: blur, disabled,
+      "aria-invalid": invalid || undefined,
+      "aria-describedby": [description, invalid && `offer-${name}-error`].filter(Boolean).join(" ") || undefined,
+    };
+  }
+
+  function fieldError(name) {
+    return touched[name] && errors[name]
+      ? <p id={`offer-${name}-error`} className="mt-1 text-sm text-red-700" role="alert">{t(errors[name])}</p> : null;
+  }
+
+  function finish(id) {
+    closeModal();
+    if (!offer) router.push(`/offers/${id}`);
+  }
 
   async function submit(e) {
     e.preventDefault();
-    if (pending.current) return;
-    const f = Object.fromEntries(new FormData(e.currentTarget));
+    if (pending.current || savedId || confirmClose) return;
+    const validation = validateOfferEditor(values);
+    setErrors(validation);
+    setTouched(Object.fromEntries(Object.keys(values).map((name) => [name, true])));
+    if (Object.keys(validation).length) {
+      form.current.elements.namedItem(Object.keys(validation)[0])?.focus();
+      return;
+    }
     pending.current = true;
     setBusy(true);
     setError("");
     try {
-      if (offer) await update(offer.id, f);
-      else {
-        const id = await add(f);
-        router.push(`/offers/${id}`);
+      const fields = { ...values, city: values.f === "Офлайн" ? values.city : "" };
+      let id = offer?.id;
+      if (offer) await update(id, fields);
+      else id = await add(fields);
+      dirty.current = false;
+      try { clearOfferDraft(localStorage, user.email, offer?.id); }
+      catch {
+        setSavedId(id);
+        setError("Услуга сохранена, но не удалось удалить черновик из браузера.");
+        return;
       }
-      closeModal();
+      finish(id);
     } catch (err) {
       setError(err.message || "Не удалось сохранить услугу.");
     } finally {
@@ -59,40 +176,66 @@ export default function NewOfferModal({ offer }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 overflow-y-auto p-4" role="dialog" aria-modal="true" aria-labelledby="offer-editor-title"
-         onClick={(e) => e.target === e.currentTarget && !pending.current && closeModal()}>
-      <form ref={form} onSubmit={submit} aria-busy={busy} className="relative bg-card text-ink border-2 border-ink max-w-xl mx-auto my-6 p-5 sm:p-6" style={{ boxShadow: "6px 6px 0 #3346e0" }}>
+         onClick={(e) => e.target === e.currentTarget && requestClose()}>
+      <form ref={form} noValidate onSubmit={submit} aria-busy={busy} className="relative bg-card text-ink border-2 border-ink max-w-xl mx-auto my-6 p-5 sm:p-6" style={{ boxShadow: "6px 6px 0 #3346e0" }}>
         <div className="flex justify-between items-start gap-4">
           <h2 id="offer-editor-title" className="font-head font-extrabold text-3xl tracking-tight">{t(offer ? "Редактировать услугу" : "Новое предложение")}</h2>
-          <button type="button" onClick={closeModal} disabled={busy} aria-label={t("Закрыть")} className="shrink-0 w-9 h-9 bg-co text-k border-2 border-ink font-bold">×</button>
+          <button type="button" onClick={requestClose} disabled={busy || confirmClose} aria-label={t("Закрыть")} className="shrink-0 w-11 h-11 bg-co text-k border-2 border-ink font-bold">×</button>
         </div>
-        <p className="mt-3 text-ink/70">{t("Поделитесь навыком, который поможет другому человеку.")}</p>
-
-        <label className="lbl block mt-5 mb-1" htmlFor="t">{t("Название")}</label>
-        <input id="t" name="t" className="fld" placeholder={t("Например, основы Figma")} defaultValue={offer?.t || ""} required minLength={3} maxLength={120} disabled={busy} />
-
-        <label className="lbl block mt-4 mb-1" htmlFor="d">{t("Описание")}</label>
-        <textarea id="d" name="d" rows={4} className="fld" placeholder={t("Расскажите, чему научите и как пройдёт встреча")} defaultValue={offer?.d || ""} required minLength={10} maxLength={3000} disabled={busy} />
-
-        <div className="grid sm:grid-cols-2 gap-4 mt-4">
-          <div><label className="lbl block mb-1" htmlFor="cat">{t("Категория")}</label>
-            <select id="cat" name="cat" className="fld" defaultValue={offer?.cat || ""} required disabled={busy}><option value="">{t("Выберите")}</option>{CATS.map((c) => <option key={c[0]} value={c[0]}>{t(c[0])}</option>)}</select></div>
-          <div><label className="lbl block mb-1" htmlFor="l">{t("Уровень")}</label>
-            <select id="l" name="l" className="fld" defaultValue={offer?.l || "Начинающий"} disabled={busy}>{["Начинающий", "Средний", "Продвинутый"].map((value) => <option key={value} value={value}>{t(value)}</option>)}</select></div>
-          <div><label className="lbl block mb-1" htmlFor="f">{t("Формат")}</label>
-            <select id="f" name="f" className="fld" defaultValue={offer?.f || "Онлайн"} disabled={busy}>{["Онлайн", "Офлайн"].map((value) => <option key={value} value={value}>{t(value)}</option>)}</select></div>
-          <div><label className="lbl block mb-1" htmlFor="city">{t("Город для офлайн встреч")}</label>
-            <input id="city" name="city" className="fld" placeholder={t("Алматы")} defaultValue={offer?.city || ""} maxLength={80} disabled={busy} /></div>
-          <div><label className="lbl block mb-1" htmlFor="m1">{t("От, минут")}</label>
-            <input id="m1" name="m1" type="number" min="15" max="480" step="1" required defaultValue={offer?.m1 || 30} className="fld" disabled={busy} /></div>
-          <div><label className="lbl block mb-1" htmlFor="m2">{t("До, минут")}</label>
-            <input id="m2" name="m2" type="number" min="15" max="480" step="1" required defaultValue={offer?.m2 || 120} className="fld" disabled={busy} /></div>
+        <p className="mt-3 text-ink/70">{t("Поделитесь навыком, помогите вырасти другому человеку.")}</p>
+        <p className="mt-2 text-sm text-ink/65">{t("Черновик сохраняется автоматически только в этом браузере.")}</p>
+        <div role="status" aria-live="polite" className="mt-2 text-sm text-ink/70">
+          {draftWarning ? t(draftWarning) : draftStatus ? t(draftStatus) : null}
         </div>
 
-        <label className="lbl block mt-4 mb-1" htmlFor="lg">{t("Язык общения")}</label>
-        <input id="lg" name="lg" className="fld" defaultValue={offer?.lg || "Русский"} required maxLength={80} disabled={busy} />
-        {error && <p role="alert" className="bg-co text-k border-2 border-ink p-3 mt-4 text-sm">{t(error)}</p>}
-        <button disabled={busy} className="btn bg-b !text-white w-full mt-5 disabled:opacity-50">{t(busy ? "Сохраняем…" : offer ? "Сохранить изменения" : "Опубликовать предложение")}</button>
-        <button type="button" disabled={busy} onClick={closeModal} className="w-full mt-4 underline text-sm underline-offset-4">{t("Отмена")}</button>
+        {confirmClose && <div ref={confirmation} role="alertdialog" aria-modal="true" aria-labelledby="close-editor-title" aria-describedby="close-editor-description" className="border-2 border-ink bg-y text-k p-4 mt-5">
+          <h3 id="close-editor-title" className="font-bold">{t("Закрыть форму?")}</h3>
+          <p id="close-editor-description" className="text-sm mt-2">{t(draftWarning
+            ? "Черновик не сохранён. При закрытии последние изменения могут потеряться."
+            : "Изменения ещё не опубликованы. Черновик останется в этом браузере.")}</p>
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <button type="button" onClick={() => setConfirmClose(false)} className="btn bg-card">{t("Продолжить редактирование")}</button>
+            <button type="button" onClick={closeModal} className="border-2 border-ink px-3 py-2 text-sm font-bold">{t(draftWarning ? "Закрыть без сохранения" : "Закрыть, сохранив черновик")}</button>
+          </div>
+        </div>}
+
+        <fieldset disabled={disabled}>
+          <label className="lbl block mt-5 mb-1" htmlFor="offer-t">{t("Название")}</label>
+          <input {...fieldProps("t")} className="fld" placeholder={t("Например, основы Figma")} required minLength={3} maxLength={120} />
+          {fieldError("t")}
+
+          <label className="lbl block mt-4 mb-1" htmlFor="offer-d">{t("Описание")}</label>
+          <textarea {...fieldProps("d", "offer-description-help")} rows={4} className="fld" placeholder={t("Расскажите, чему учите и как пройдёт обмен")} required minLength={10} maxLength={3000} />
+          <p id="offer-description-help" className="mt-1 text-xs text-ink/65">{t("От 10 до 3000 символов. Введено: {count}.", { count: values.d.length })}</p>
+          {fieldError("d")}
+
+          <div className="grid sm:grid-cols-2 gap-4 mt-4">
+            <div><label className="lbl block mb-1" htmlFor="offer-cat">{t("Категория")}</label>
+              <select {...fieldProps("cat")} className="fld" required><option value="">{t("Выберите")}</option>{CATS.map((c) => <option key={c[0]} value={c[0]}>{t(c[0])}</option>)}</select>{fieldError("cat")}</div>
+            <div><label className="lbl block mb-1" htmlFor="offer-l">{t("Уровень")}</label>
+              <select {...fieldProps("l")} className="fld">{["Начинающий", "Средний", "Продвинутый"].map((value) => <option key={value} value={value}>{t(value)}</option>)}</select>{fieldError("l")}</div>
+            <div><label className="lbl block mb-1" htmlFor="offer-f">{t("Формат")}</label>
+              <select {...fieldProps("f")} className="fld">{["Онлайн", "Офлайн"].map((value) => <option key={value} value={value}>{t(value)}</option>)}</select>{fieldError("f")}</div>
+            {values.f === "Офлайн" && <div><label className="lbl block mb-1" htmlFor="offer-city">{t("Город для офлайн встреч")}</label>
+              <input {...fieldProps("city")} className="fld" placeholder={t("Алматы")} maxLength={80} required />{fieldError("city")}</div>}
+          </div>
+
+          <p id="offer-duration-help" className="mt-5 text-sm text-ink/70">{t("1 минута помощи = 1 минута на балансе. Укажите длительность от 15 до 480 минут.")}</p>
+          <div className="grid sm:grid-cols-2 gap-4 mt-3">
+            <div><label className="lbl block mb-1" htmlFor="offer-m1">{t("От, минут")}</label>
+              <input {...fieldProps("m1", "offer-duration-help")} type="number" inputMode="numeric" min="15" max="480" step="1" required className="fld" />{fieldError("m1")}</div>
+            <div><label className="lbl block mb-1" htmlFor="offer-m2">{t("До, минут")}</label>
+              <input {...fieldProps("m2", "offer-duration-help")} type="number" inputMode="numeric" min="15" max="480" step="1" required className="fld" />{fieldError("m2")}</div>
+          </div>
+
+          <label className="lbl block mt-4 mb-1" htmlFor="offer-lg">{t("Язык общения")}</label>
+          <input {...fieldProps("lg")} className="fld" required maxLength={80} />{fieldError("lg")}
+        </fieldset>
+        {error && <p role={savedId ? "status" : "alert"} className="bg-co text-k border-2 border-ink p-3 mt-4 text-sm">{t(error)}</p>}
+        {savedId ? <button type="button" className="btn bg-y w-full mt-5" onClick={() => finish(savedId)}>{t("Готово")}</button> : <>
+          <button disabled={disabled} className="btn bg-b !text-white w-full mt-5 disabled:opacity-50">{t(busy ? "Сохраняем…" : offer ? "Сохранить изменения" : "Опубликовать предложение")}</button>
+          <button type="button" disabled={busy || confirmClose} onClick={requestClose} className="w-full mt-4 underline text-sm underline-offset-4">{t("Отмена")}</button>
+        </>}
       </form>
     </div>
   );

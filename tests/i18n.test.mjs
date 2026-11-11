@@ -1,13 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { LANGUAGE_COOKIE, LANGUAGE_KEY, LANGUAGES, normalizeLanguage, translate } from "../lib/i18n.mjs";
 import common from "../lib/translations-common.mjs";
 import catalog from "../lib/translations-catalog.mjs";
 import account from "../lib/translations-account.mjs";
+import homeUx from "../lib/translations-home-ux.mjs";
+import searchUx from "../lib/translations-search-ux.mjs";
+import profileUx from "../lib/translations-profile-ux.mjs";
+import offerEditor from "../lib/translations-offer-editor.mjs";
 import { emptyCatalog, readCatalog, saveOffer, CATALOG_KEY } from "../lib/catalog.mjs";
 
-const dictionaries = { common, catalog, account };
-const entries = { ...common, ...catalog, ...account };
+const dictionaries = { common, catalog, account, homeUx, searchUx, profileUx, offerEditor };
+const entries = Object.assign({}, ...Object.values(dictionaries));
 const placeholders = (message) => [...new Set([...message.matchAll(/\{(\w+)\}/g)].map((match) => match[1]))].sort();
 
 test("the language selector offers Russian, Kazakh and English with valid locales", () => {
@@ -56,6 +61,19 @@ test("the translation API switches language and interpolates every declared mess
   }
   assert.ok(parameterized > 0, "dynamic UI messages should have translated parameters");
   assert.equal(translate("en", "{name} · {name} · {missing}", { name: "$& Айару" }), "$& Айару · $& Айару · {missing}");
+});
+
+test("the updated user journeys declare translations for their static interface text", () => {
+  for (const file of [
+    "app/page.js", "app/find/FindClient.js", "components/OfferCard.js",
+    "components/NewOfferModal.js", "app/login/page.js", "app/profile/page.js",
+  ]) {
+    const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+    for (const match of source.matchAll(/\bt\(("(?:[^"\\]|\\.)*")/g)) {
+      const message = JSON.parse(match[1]);
+      assert.ok(Object.hasOwn(entries, message), `${file}: missing translations for ${message}`);
+    }
+  }
 });
 
 test("unknown user content and object-prototype names remain unchanged", () => {

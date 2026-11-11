@@ -1,29 +1,33 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthContext";
 import { useOffers } from "@/components/OffersContext";
 import Art from "@/components/Art";
 import FavoriteButton from "@/components/FavoriteButton";
 import ServiceCheckout from "@/components/ServiceCheckout";
 import { useLanguage } from "@/components/LanguageContext";
+import { catalogReturnHref } from "@/lib/search-filters.mjs";
 
 export default function OfferDetails({ id }) {
   const { t } = useLanguage();
   const { user, ready: authReady } = useAuth();
   const { all, ready, error, refresh, openModal } = useOffers();
+  const searchParams = useSearchParams();
+  const returnTo = catalogReturnHref(searchParams.get("returnTo"));
   const offer = all.find((item) => item.id === id);
   if (!ready || !authReady) return <div className="max-w-6xl mx-auto px-4 py-14" role="status">{t("Загружаем услугу…")}</div>;
   if (error) return <div className="max-w-6xl mx-auto px-4 py-14"><p role="alert">{t(error)}</p><button onClick={refresh} className="btn bg-y mt-4">{t("Повторить загрузку")}</button></div>;
   if (!offer) return <section className="max-w-3xl mx-auto px-4 py-20">
     <h1 className="font-head font-extrabold text-4xl">{t("Услуга не найдена")}</h1>
     <p className="mt-4 text-ink/65">{t("Проверьте ссылку или выберите другую услугу в каталоге.")}</p>
-    <Link href="/find" className="btn bg-y inline-block mt-6">{t("Перейти в каталог ↗")}</Link>
+    <Link href={returnTo || "/find"} className="btn bg-y inline-block mt-6">{t("Перейти в каталог ↗")}</Link>
   </section>;
   const own = user?.email === offer.email;
 
   return <div className="max-w-6xl mx-auto px-4 py-8 md:py-12">
-    <Link href={own ? "/services" : "/find"} className="text-sm font-semibold underline underline-offset-4">← {t(own ? "Мои услуги" : "Все услуги")}</Link>
+    <Link href={returnTo || (own ? "/services" : "/find")} className="text-sm font-semibold underline underline-offset-4">← {t(returnTo ? "Вернуться к результатам" : own ? "Мои услуги" : "Все услуги")}</Link>
     <div className="flex flex-wrap items-start justify-between gap-5 mt-7">
       <div className="min-w-0 flex-1 basis-64">
         <span className="lbl bg-y text-k border-2 border-ink px-2 py-1 inline-block">{t(offer.cat)}</span>
@@ -66,7 +70,7 @@ export default function OfferDetails({ id }) {
           <p className="text-sm mt-4">{t("Вы можете изменить описание, формат, город и длительность. Обновления появятся в каталоге и в избранном участников.")}</p>
           <button type="button" onClick={() => openModal(offer)} className="btn bg-b !text-white w-full mt-6">{t("Редактировать услугу")}</button>
           <Link href="/services" className="block mt-5 text-sm underline underline-offset-4">{t("Все мои услуги ↗")}</Link>
-        </section> : <ServiceCheckout key={`${offer.id}:${offer.updatedAt || ""}:${user?.email || "guest"}`} offer={offer} />}
+        </section> : <ServiceCheckout key={`${offer.id}:${offer.updatedAt || ""}:${user?.email || "guest"}`} offer={offer} returnTo={returnTo} />}
       </aside>
     </div>
   </div>;

@@ -1,11 +1,12 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "./AuthContext";
 import { OFFERS } from "./data";
 import { allOffers, CATALOG_KEY, emptyCatalog, readCatalog, saveOffer, setFavorite } from "@/lib/catalog.mjs";
 import NewOfferModal from "./NewOfferModal";
+import { consumeOfferCreationIntent } from "@/lib/auth-navigation.mjs";
 
 const Ctx = createContext(null);
 export const useOffers = () => useContext(Ctx);
@@ -13,6 +14,7 @@ export const useOffers = () => useContext(Ctx);
 export function OffersProvider({ children }) {
   const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [catalog, setCatalog] = useState(emptyCatalog);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
@@ -20,6 +22,14 @@ export function OffersProvider({ children }) {
   const closeModal = useCallback(() => setEditor(null), []);
 
   useEffect(() => { setEditor(null); }, [user?.email]);
+
+  useEffect(() => {
+    if (!user || pathname !== "/services") return;
+    const returnTo = consumeOfferCreationIntent(window.location.href, true);
+    if (returnTo === null) return;
+    window.history.replaceState(window.history.state, "", returnTo);
+    setEditor({ offer: null, owner: user.email });
+  }, [pathname, user?.email]);
 
   const refresh = useCallback(() => {
     try {
@@ -68,7 +78,7 @@ export function OffersProvider({ children }) {
   }
 
   function openModal(offer = null) {
-    if (!user) { router.push("/login?next=/services"); return; }
+    if (!user) { router.push(`/login?next=${encodeURIComponent("/services?create=1")}`); return; }
     if (offer && offer.email !== user.email) return;
     setEditor({ offer, owner: user.email });
   }

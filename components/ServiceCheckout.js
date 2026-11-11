@@ -7,8 +7,9 @@ import { useRef, useState } from "react";
 import { useAuth } from "./AuthContext";
 import { useWallet } from "./WalletContext";
 import { serviceQuote } from "@/lib/catalog.mjs";
+import { catalogReturnHref } from "@/lib/search-filters.mjs";
 
-export default function ServiceCheckout({ offer }) {
+export default function ServiceCheckout({ offer, returnTo }) {
   const { t } = useLanguage();
   const { user, ready: authReady } = useAuth();
   const { balance, ready, error: walletError, refresh, transfer } = useWallet();
@@ -19,6 +20,8 @@ export default function ServiceCheckout({ offer }) {
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   const amount = Number(minutes);
+  const catalogLink = catalogReturnHref(returnTo);
+  const nextHref = `/offers/${offer.id}${catalogLink ? `?returnTo=${encodeURIComponent(catalogLink)}` : ""}`;
 
   function prepare(event) {
     event.preventDefault();
@@ -54,7 +57,7 @@ export default function ServiceCheckout({ offer }) {
     <p className="mt-3 text-sm text-ink/65">{t("1 минута занятия = 1 минута с вашего баланса.")}</p>
     {!authReady ? <p role="status" className="mt-5">{t("Загружаем…")}</p> : !user ? <div className="mt-5">
       <p className="text-sm mb-4">{t("Войдите, чтобы выбрать длительность и оплатить помощь.")}</p>
-      <Link href={`/login?next=${encodeURIComponent(`/offers/${offer.id}`)}`} className="btn bg-y block text-center">{t("Войти и оплатить ↗")}</Link>
+      <Link href={`/login?next=${encodeURIComponent(nextHref)}`} className="btn bg-y block text-center">{t("Войти и оплатить ↗")}</Link>
     </div> : walletError ? <div className="mt-5">
       <p role="alert" className="text-sm">{t(walletError)}</p>
       <button onClick={refresh} type="button" className="btn bg-y mt-4">{t("Повторить загрузку")}</button>

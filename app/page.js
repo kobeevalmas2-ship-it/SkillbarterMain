@@ -51,6 +51,32 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="max-w-6xl mx-auto px-4 pt-14" aria-labelledby="how-it-works-title">
+        <span className="lbl text-ink/60">{t("Ваш первый обмен")}</span>
+        <h2 id="how-it-works-title" className="font-head font-extrabold text-4xl md:text-5xl tracking-tight mt-2">{t("Как работает обмен")}</h2>
+        <p className="mt-3 text-ink/70">{t("Одна минута помощи = одна минута на балансе.")}</p>
+        <ol className="grid md:grid-cols-3 gap-6 mt-8">
+          {[
+            ["01", "Предложите навык", "Расскажите, с чем можете помочь, и укажите формат и длительность встречи.", "bg-lb"],
+            ["02", "Получите минуты", "Когда другой участник оплачивает вашу помощь, минуты переходят на ваш баланс.", "bg-pu"],
+            ["03", "Выберите помощь", "Потратьте минуты на полезную услугу любого участника. Обмениваться с тем же человеком необязательно.", "bg-co"],
+          ].map(([number, title, description, color]) => (
+            <li key={number} className="bg-card border-2 border-ink p-6 shs">
+              <span aria-hidden="true" className={`${color} text-k border-2 border-ink w-11 h-11 grid place-items-center font-mono font-bold`}>{number}</span>
+              <h3 className="font-head font-extrabold text-2xl mt-5">{t(title)}</h3>
+              <p className="text-sm text-ink/70 leading-relaxed mt-3">{t(description)}</p>
+            </li>
+          ))}
+        </ol>
+        <div className="mt-7 bg-y text-k border-2 border-ink p-6 sm:p-7 flex flex-wrap gap-6 items-center justify-between">
+          <div className="max-w-2xl">
+            <h3 className="font-head font-extrabold text-2xl">{t("Например: час дизайна → час английского")}</h3>
+            <p className="text-sm leading-relaxed mt-3">{t("Помогите участнику освоить Figma за 60 минут. Полученные минуты можно потратить на разговорный английский у другого участника.")}</p>
+          </div>
+          <Link href="/find" className="btn bg-card !text-ink">{t("Найти свой первый обмен ↗")}</Link>
+        </div>
+      </section>
+
       <section className="max-w-6xl mx-auto px-4 py-14">
         <h2 className="font-head font-extrabold text-4xl md:text-5xl tracking-tight">{t("Чему хотите научиться?")}</h2>
         <p className="mt-2 text-ink/60">{t("Найдите человека, который поможет вам сделать следующий шаг.")}</p>
