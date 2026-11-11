@@ -45,7 +45,17 @@ export function AuthProvider({ children }) {
     const users = JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
     const account = users.find((item) => item.email === email.trim().toLowerCase() && item.password === password);
     if (!account) throw new Error("Неверный адрес электронной почты или пароль.");
-    const profile = { name: account.name, email: account.email };
+    const { password: _password, ...profile } = account;
+    localStorage.setItem(SESSION_KEY, JSON.stringify(profile));
+    setUser(profile);
+  }
+
+  function updateProfile(changes) {
+    if (!user) throw new Error("Войдите в аккаунт.");
+    const users = JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
+    const profile = { ...user, ...changes, email: user.email };
+    localStorage.setItem(USERS_KEY, JSON.stringify(users.map((item) =>
+      item.email === user.email ? { ...item, ...changes, email: user.email } : item)));
     localStorage.setItem(SESSION_KEY, JSON.stringify(profile));
     setUser(profile);
   }
@@ -55,7 +65,7 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
-  return <AuthContext.Provider value={{ user, ready, register, login, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, ready, register, login, logout, updateProfile }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

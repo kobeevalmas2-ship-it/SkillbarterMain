@@ -28,8 +28,9 @@ export default function Header() {
           {user && <Link href="/wallet" aria-label={t("Открыть кошелёк")} className="bg-y text-k border-2 border-ink px-2 sm:px-3 py-1.5 font-mono font-bold text-xs sm:text-sm whitespace-nowrap shs">◷ {walletReady ? balance : "…"} {t("мин")}</Link>}
           {!ready ? null : user ? (
             <div className="flex items-center gap-2 text-sm font-semibold">
-              <span className="hidden sm:grid w-9 h-9 bg-pu text-k border-2 border-ink place-items-center text-xs font-bold" title={user.name}>{user.name.slice(0, 2).toUpperCase()}</span>
+              <Link href="/profile" aria-label={t("Мой профиль")} className="grid w-9 h-9 overflow-hidden bg-pu text-k border-2 border-ink place-items-center text-xs font-bold" title={user.name}>{user.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : user.name.slice(0, 2).toUpperCase()}</Link>
               <span className="hidden 2xl:inline max-w-[100px] truncate">{user.name}</span>
+              <Link href="/profile" className="hidden sm:inline text-xs underline underline-offset-2">{t("Профиль")}</Link>
               <button className="text-xs underline underline-offset-2" onClick={logout}>{t("Выйти")}</button>
             </div>
           ) : <Link href="/login" className="btn bg-y !px-3 !py-1.5 text-sm">{t("Войти")}</Link>}
