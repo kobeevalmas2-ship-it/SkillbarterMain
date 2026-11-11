@@ -5,6 +5,7 @@ import { useOffers } from "./OffersContext";
 import { useAuth } from "./AuthContext";
 import { CATS } from "./data";
 import { useLanguage } from "./LanguageContext";
+import Art from "./Art";
 import { clearOfferDraft, offerEditorChanged, offerEditorValues, readOfferDraft, validateOfferEditor, writeOfferDraft } from "@/lib/offer-draft.mjs";
 
 export default function NewOfferModal({ offer }) {
@@ -22,14 +23,18 @@ export default function NewOfferModal({ offer }) {
   const [draftWarning, setDraftWarning] = useState("");
   const [confirmClose, setConfirmClose] = useState(false);
   const [savedId, setSavedId] = useState(null);
+  const [preview, setPreview] = useState(false);
   const pending = useRef(false);
   const dirty = useRef(false);
   const form = useRef(null);
   const confirmation = useRef(null);
   const closeTrigger = useRef(null);
   const requestCloseRef = useRef(null);
+  const previewHeading = useRef(null);
+  const previousPreview = useRef(false);
   const router = useRouter();
   const disabled = busy || !draftReady || confirmClose || Boolean(savedId);
+  const previewDuration = Number(values.m1) === Number(values.m2) ? String(Number(values.m1)) : `${Number(values.m1)}–${Number(values.m2)}`;
 
   useEffect(() => {
     try {
@@ -91,6 +96,12 @@ export default function NewOfferModal({ offer }) {
     else if (closeTrigger.current?.isConnected) closeTrigger.current.focus();
   }, [confirmClose]);
 
+  useEffect(() => {
+    if (preview) previewHeading.current?.focus();
+    else if (previousPreview.current) form.current?.querySelector("input")?.focus();
+    previousPreview.current = preview;
+  }, [preview]);
+
   function requestClose() {
     if (pending.current || confirmClose) return;
     if (!dirty.current) { closeModal(); return; }
@@ -124,7 +135,7 @@ export default function NewOfferModal({ offer }) {
   function fieldProps(name, description) {
     const invalid = Boolean(touched[name] && errors[name]);
     return {
-      id: `offer-${name}`, name, value: values[name], onChange: change, onBlur: blur, disabled,
+      id: `offer-${name}`, name, value: values[name], onChange: change, onBlur: blur, disabled: disabled || preview,
       "aria-invalid": invalid || undefined,
       "aria-describedby": [description, invalid && `offer-${name}-error`].filter(Boolean).join(" ") || undefined,
     };
@@ -150,6 +161,7 @@ export default function NewOfferModal({ offer }) {
       form.current.elements.namedItem(Object.keys(validation)[0])?.focus();
       return;
     }
+    if (!preview) { setPreview(true); setError(""); return; }
     pending.current = true;
     setBusy(true);
     setError("");
@@ -179,11 +191,11 @@ export default function NewOfferModal({ offer }) {
          onClick={(e) => e.target === e.currentTarget && requestClose()}>
       <form ref={form} noValidate onSubmit={submit} aria-busy={busy} className="relative bg-card text-ink border-2 border-ink max-w-xl mx-auto my-6 p-5 sm:p-6" style={{ boxShadow: "6px 6px 0 #3346e0" }}>
         <div className="flex justify-between items-start gap-4">
-          <h2 id="offer-editor-title" className="font-head font-extrabold text-3xl tracking-tight">{t(offer ? "Редактировать услугу" : "Новое предложение")}</h2>
+          <h2 ref={previewHeading} tabIndex={-1} id="offer-editor-title" className="font-head font-extrabold text-3xl tracking-tight">{t(preview ? "Предпросмотр предложения" : offer ? "Редактировать услугу" : "Новое предложение")}</h2>
           <button type="button" onClick={requestClose} disabled={busy || confirmClose} aria-label={t("Закрыть")} className="shrink-0 w-11 h-11 bg-co text-k border-2 border-ink font-bold">×</button>
         </div>
-        <p className="mt-3 text-ink/70">{t("Поделитесь навыком, помогите вырасти другому человеку.")}</p>
-        <p className="mt-2 text-sm text-ink/65">{t("Черновик сохраняется автоматически только в этом браузере.")}</p>
+        <p className="mt-3 text-ink/70">{t(preview ? offer ? "Так будет выглядеть обновлённое предложение. Изменения вступят в силу после сохранения." : "Так участники увидят ваше предложение. Оно появится в каталоге только после публикации." : "Поделитесь навыком, помогите вырасти другому человеку.")}</p>
+        {!preview && <p className="mt-2 text-sm text-ink/65">{t("Черновик сохраняется автоматически только в этом браузере.")}</p>}
         <div role="status" aria-live="polite" className="mt-2 text-sm text-ink/70">
           {draftWarning ? t(draftWarning) : draftStatus ? t(draftStatus) : null}
         </div>
@@ -199,7 +211,34 @@ export default function NewOfferModal({ offer }) {
           </div>
         </div>}
 
-        <fieldset disabled={disabled}>
+        {preview && <article aria-label={t("Предпросмотр предложения")} className="mt-6 border-2 border-ink bg-card overflow-hidden">
+          <Art cat={values.cat} className="h-36" />
+          <div className="p-5 min-w-0">
+            <p className="lbl text-ink/60">{t(offer ? "Изменения ещё не сохранены" : "Предложение ещё не опубликовано")}</p>
+            <p className="lbl mt-4">{t(values.cat)}</p>
+            <h3 className="font-head font-extrabold text-3xl mt-2 break-words">{values.t.trim()}</h3>
+            <p className="text-sm text-ink/75 leading-relaxed whitespace-pre-wrap break-words mt-4">{values.d.trim()}</p>
+            <dl className="grid sm:grid-cols-2 gap-4 mt-6 border-t-2 border-ink pt-4 text-sm">
+              {[
+                ["Формат", t(values.f)],
+                ["Уровень подготовки", t(values.l)],
+                ["Длительность", `${previewDuration} ${t("мин")}`],
+                ["Стоимость", t("{minutes} мин со счёта", { minutes: previewDuration })],
+                ["Язык общения", t(values.lg)],
+                ...(values.f === "Офлайн" ? [["Город", values.city.trim()]] : []),
+              ].map(([label, value]) => <div key={label}><dt className="lbl text-ink/60">{t(label)}</dt><dd className="font-semibold mt-1 break-words">{value}</dd></div>)}
+            </dl>
+            <p className="border-2 border-ink bg-y text-k p-3 mt-5 text-sm font-semibold">{t("1 минута помощи = 1 минута баланса")}</p>
+            <div className="flex gap-3 items-center mt-5 border-t-2 border-ink pt-4">
+              <span className="shrink-0 w-10 h-10 border-2 border-ink bg-pu text-k grid place-items-center overflow-hidden text-sm font-bold">
+                {user.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : user.name.slice(0, 2).toUpperCase()}
+              </span>
+              <span className="font-semibold break-words min-w-0">{offer?.n || user.name}</span>
+            </div>
+          </div>
+        </article>}
+
+        <fieldset disabled={disabled || preview} hidden={preview}>
           <label className="lbl block mt-5 mb-1" htmlFor="offer-t">{t("Название")}</label>
           <input {...fieldProps("t")} className="fld" placeholder={t("Например, основы Figma")} required minLength={3} maxLength={120} />
           {fieldError("t")}
@@ -233,7 +272,8 @@ export default function NewOfferModal({ offer }) {
         </fieldset>
         {error && <p role={savedId ? "status" : "alert"} className="bg-co text-k border-2 border-ink p-3 mt-4 text-sm">{t(error)}</p>}
         {savedId ? <button type="button" className="btn bg-y w-full mt-5" onClick={() => finish(savedId)}>{t("Готово")}</button> : <>
-          <button disabled={disabled} className="btn bg-b !text-white w-full mt-5 disabled:opacity-50">{t(busy ? "Сохраняем…" : offer ? "Сохранить изменения" : "Опубликовать предложение")}</button>
+          <button type="submit" disabled={disabled} className="btn bg-b !text-white w-full mt-5 disabled:opacity-50">{t(busy ? "Сохраняем…" : preview ? offer ? "Подтвердить и сохранить" : "Подтвердить и опубликовать" : "Предпросмотр")}</button>
+          {preview && <button type="button" disabled={busy || confirmClose} onClick={() => setPreview(false)} className="btn bg-card !text-ink w-full mt-3 disabled:opacity-50">{t("Вернуться к редактированию")}</button>}
           <button type="button" disabled={busy || confirmClose} onClick={requestClose} className="w-full mt-4 underline text-sm underline-offset-4">{t("Отмена")}</button>
         </>}
       </form>

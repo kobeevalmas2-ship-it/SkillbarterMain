@@ -5,6 +5,7 @@ import { useOffers } from "@/components/OffersContext";
 import { useAuth } from "@/components/AuthContext";
 import Link from "next/link";
 import { useLanguage } from "@/components/LanguageContext";
+import { OfferGridSkeleton } from "@/components/LoadingState";
 
 export default function ServicesPage() {
   const { t } = useLanguage();
@@ -22,7 +23,7 @@ export default function ServicesPage() {
       </div>
 
       <div className="mt-8">
-        {!ready || !authReady ? <p role="status">{t("Загружаем услуги…")}</p> : !user ? <div className="bg-card border-2 border-ink p-8">
+        {!ready || !authReady ? <OfferGridSkeleton label="Загружаем услуги…" count={3} /> : !user ? <div className="bg-card border-2 border-ink p-8">
           <h2 className="font-head font-extrabold text-2xl">{t("Войдите, чтобы управлять своими услугами")}</h2>
           <Link href="/login?next=/services" className="btn bg-y inline-block mt-5">{t("Войти в аккаунт ↗")}</Link>
         </div> : error ? <p role="alert" className="bg-co text-k border-2 border-ink p-4">{t(error)}</p> : mine.length ? (

@@ -8,6 +8,7 @@ import { useAuth } from "./AuthContext";
 import { useWallet } from "./WalletContext";
 import { serviceQuote } from "@/lib/catalog.mjs";
 import { catalogReturnHref } from "@/lib/search-filters.mjs";
+import LoadingState from "./LoadingState";
 
 export default function ServiceCheckout({ offer, returnTo }) {
   const { t } = useLanguage();
@@ -55,13 +56,13 @@ export default function ServiceCheckout({ offer, returnTo }) {
     <span className="lbl text-acc">{t("Обмен временем")}</span>
     <h2 id="checkout-title" className="font-head font-extrabold text-3xl mt-2">{t("Оплата услуги")}</h2>
     <p className="mt-3 text-sm text-ink/65">{t("1 минута занятия = 1 минута с вашего баланса.")}</p>
-    {!authReady ? <p role="status" className="mt-5">{t("Загружаем…")}</p> : !user ? <div className="mt-5">
+    {!authReady ? <div className="mt-5"><LoadingState variant="compact" label="Загружаем…" /></div> : !user ? <div className="mt-5">
       <p className="text-sm mb-4">{t("Войдите, чтобы выбрать длительность и оплатить помощь.")}</p>
       <Link href={`/login?next=${encodeURIComponent(nextHref)}`} className="btn bg-y block text-center">{t("Войти и оплатить ↗")}</Link>
     </div> : walletError ? <div className="mt-5">
       <p role="alert" className="text-sm">{t(walletError)}</p>
       <button onClick={refresh} type="button" className="btn bg-y mt-4">{t("Повторить загрузку")}</button>
-    </div> : !ready ? <p role="status" className="mt-5">{t("Загружаем баланс…")}</p> : success ? <div className="mt-5">
+    </div> : !ready ? <div className="mt-5"><LoadingState variant="compact" label="Загружаем баланс…" /></div> : success ? <div className="mt-5">
       <div role="status" className="bg-lb text-k border-2 border-ink p-4">
         <p className="font-bold text-xl">{t("Услуга оплачена!")}</p>
         <p className="text-sm mt-2">{t("{minutes} мин переведены участнику {name}.", { minutes: success.minutes, name: offer.n })}</p>

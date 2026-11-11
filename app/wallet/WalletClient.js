@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import { useAuth } from "@/components/AuthContext";
 import { useWallet } from "@/components/WalletContext";
 import { normalizeEmail } from "@/lib/wallet.mjs";
+import LoadingState from "@/components/LoadingState";
 
 const FILTERS = [["all", "Все операции"], ["incoming", "Поступления"], ["outgoing", "Списания"]];
 
@@ -14,7 +15,7 @@ export default function WalletClient(props) {
   const { t } = useLanguage();
   const { user, ready: authReady } = useAuth();
   const { ready, error, refresh } = useWallet();
-  if (!authReady) return <div className="max-w-6xl mx-auto px-4 py-14" role="status">{t("Загружаем кошелёк…")}</div>;
+  if (!authReady) return <div className="max-w-6xl mx-auto px-4 py-14"><LoadingState variant="dashboard" label="Загружаем кошелёк…" /></div>;
   if (!user) {
     const params = new URLSearchParams({ recipient: props.initialRecipient, minutes: props.initialMinutes, service: props.initialService });
     return <section className="max-w-2xl mx-auto px-4 py-16">
@@ -30,14 +31,14 @@ export default function WalletClient(props) {
     <p role="alert" className="border-2 border-ink bg-co text-k p-4">{t(error)}</p>
     <button onClick={refresh} className="btn bg-y mt-4">{t("Попробовать снова")}</button>
   </div>;
-  if (!ready) return <div className="max-w-6xl mx-auto px-4 py-14" role="status">{t("Загружаем кошелёк…")}</div>;
+  if (!ready) return <div className="max-w-6xl mx-auto px-4 py-14"><LoadingState variant="dashboard" label="Загружаем кошелёк…" /></div>;
   return <WalletDashboard key={user.email} {...props} user={user} />;
 }
 
 function WalletDashboard({ user, initialRecipient, initialMinutes, initialService }) {
   const { t, locale } = useLanguage();
   const dateFormat = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
-  const { balance, history, participants, transfer } = useWallet();
+  const { balance, reserved, totalBalance, history, participants, transfer } = useWallet();
   const [recipient, setRecipient] = useState(normalizeEmail(initialRecipient));
   const [minutes, setMinutes] = useState(initialMinutes);
   const [note, setNote] = useState(initialService);
@@ -110,6 +111,7 @@ function WalletDashboard({ user, initialRecipient, initialMinutes, initialServic
         <p className="lbl">{t("Доступно для обмена")}</p>
         <p className="font-head font-extrabold text-5xl mt-3">{balance.toLocaleString(locale)} <span className="text-xl">{t("мин")}</span></p>
         <p className="text-sm mt-3">{t("{hours} ч {minutes} мин вашего времени", { hours: Math.floor(balance / 60), minutes: balance % 60 })}</p>
+        {reserved > 0 && <p className="text-sm mt-3 border-t-2 border-ink pt-3">{t("Всего: {total} мин · В резерве: {reserved} мин", { total: totalBalance, reserved })}<Link href="/requests" className="block underline mt-1">{t("Посмотреть согласованные заявки")}</Link></p>}
       </div>
       <div className="bg-lb text-k border-2 border-ink p-6">
         <p className="lbl">{t("Получено от участников ↙")}</p>

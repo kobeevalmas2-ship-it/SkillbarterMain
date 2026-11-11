@@ -7,6 +7,7 @@ import { useOffers } from "@/components/OffersContext";
 import { CATS } from "@/components/data";
 import { useLanguage } from "@/components/LanguageContext";
 import { EMPTY_FILTERS, readSearchFilters, findHref, filterOffers } from "@/lib/search-filters.mjs";
+import { OfferGridSkeleton } from "@/components/LoadingState";
 
 const fieldCls = "fld !text-k !bg-[#fffdf6]";
 
@@ -82,8 +83,8 @@ export default function FindClient({ initialFilters }) {
       </div>}
 
       {error && <p role="alert" className="bg-co text-k border-2 border-ink p-3 mt-6">{t(error)}</p>}
-      <p className="mt-6 text-sm text-ink/70" role="status">{ready ? t("Найдено предложений: {count}", { count: list.length }) : t("Загружаем услуги…")}</p>
-      {list.length ? (
+      {ready && <p className="mt-6 text-sm text-ink/70" role="status">{t("Найдено предложений: {count}", { count: list.length })}</p>}
+      {!ready ? <div className="mt-6"><OfferGridSkeleton label="Загружаем услуги…" /></div> : list.length ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-7 mt-4">
           {list.map((o) => <OfferCard key={o.id} o={o} returnTo={returnTo} />)}
         </div>

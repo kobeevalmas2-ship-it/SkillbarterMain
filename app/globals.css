@@ -2,12 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { --bg:#f7f2e8; --card:#fffdf6; --ink:#111; --acc:#3346e0; --sh:#111; }
+:root { --bg:#f7f2e8; --card:#fffdf6; --ink:#111; --acc:#3346e0; --sh:#111; --skeleton:#e8e1d4; color-scheme: light; }
+:root[data-theme="dark"] { --bg:#15151a; --card:#1e1e26; --ink:#f5f1e6; --acc:#8c9bff; --sh:#f5f1e6; --skeleton:#34343f; color-scheme: dark; }
 @media (prefers-color-scheme: dark) {
-  :root { --bg:#15151a; --card:#1e1e26; --ink:#f5f1e6; --acc:#8c9bff; --sh:#f5f1e6; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) { --bg:#15151a; --card:#1e1e26; --ink:#f5f1e6; --acc:#8c9bff; --sh:#f5f1e6; --skeleton:#34343f; color-scheme: dark; }
 }
 body { background: var(--bg); color: var(--ink); }
 :focus-visible { outline: 3px solid #3346e0; outline-offset: 2px; }
+.skeleton { background: var(--skeleton); animation: skeleton-pulse 1.6s ease-in-out infinite; }
+@keyframes skeleton-pulse { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
 
 @layer components {
   .sh  { box-shadow: 5px 5px 0 var(--sh); }
@@ -19,4 +22,4 @@ body { background: var(--bg); color: var(--ink); }
   .fld:focus { outline: 3px solid #3346e0; }
   .nav-on { background: #ffe45c; color: #111; }
 }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

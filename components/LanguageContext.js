@@ -12,6 +12,9 @@ const PAGE_TITLES = {
   "/login": "Вход — SkillBarter",
   "/profile": "Профиль — SkillBarter",
   "/wallet": "Кошелёк и история транзакций · SkillBarter",
+  "/day": "Мой день — SkillBarter",
+  "/requests": "Заявки — SkillBarter",
+  "/notifications": "Уведомления — SkillBarter",
 };
 
 export function LanguageProvider({ children, initialLanguage = "ru" }) {
@@ -44,7 +47,7 @@ export function LanguageProvider({ children, initialLanguage = "ru" }) {
 
   useEffect(() => {
     document.documentElement.lang = language;
-    document.title = t(PAGE_TITLES[path] || (path?.startsWith("/offers/") ? "Услуга · SkillBarter" : "SkillBarter"));
+    document.title = t(PAGE_TITLES[path] || (path?.startsWith("/requests/") ? "Заявка и чат — SkillBarter" : path?.startsWith("/offers/") ? "Услуга · SkillBarter" : "SkillBarter"));
     const description = document.querySelector('meta[name="description"]');
     if (description) description.content = t(path?.startsWith("/offers/") ? "Подробности услуги и оплата временем" : "Обмен навыками за время");
   }, [language, path, t]);

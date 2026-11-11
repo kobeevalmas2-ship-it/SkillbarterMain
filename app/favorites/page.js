@@ -5,6 +5,7 @@ import { useAuth } from "@/components/AuthContext";
 import { useOffers } from "@/components/OffersContext";
 import OfferCard from "@/components/OfferCard";
 import { useLanguage } from "@/components/LanguageContext";
+import { OfferGridSkeleton } from "@/components/LoadingState";
 
 export default function FavoritesPage() {
   const { t } = useLanguage();
@@ -14,7 +15,7 @@ export default function FavoritesPage() {
     <span className="lbl bg-pu text-k border-2 border-ink px-2 py-1 inline-block">{t("Сохраните на потом")}</span>
     <h1 className="font-head font-extrabold text-4xl md:text-6xl tracking-tight mt-4">{t("Избранное")}</h1>
     <p className="mt-3 text-ink/65">{t("Услуги, к которым хочется вернуться. Нажмите на сердечко в карточке, чтобы сохранить их здесь.")}</p>
-    {!authReady || !ready ? <p role="status" className="mt-8">{t("Загружаем избранное…")}</p> : !user ? <div className="bg-card border-2 border-ink p-7 mt-8 shs">
+    {!authReady || !ready ? <div className="mt-8"><OfferGridSkeleton label="Загружаем избранное…" count={3} /></div> : !user ? <div className="bg-card border-2 border-ink p-7 mt-8 shs">
       <h2 className="font-head font-extrabold text-2xl">{t("Войдите, чтобы сохранять услуги")}</h2>
       <p className="mt-3 text-ink/65">{t("У каждого участника свой список избранного.")}</p>
       <Link href="/login?next=/favorites" className="btn bg-y inline-block mt-5">{t("Войти в аккаунт ↗")}</Link>

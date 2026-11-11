@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthContext";
 import { useLanguage } from "@/components/LanguageContext";
 import { clearProfileDraft, profileFields, readProfileDraft, writeProfileDraft } from "@/lib/profile-draft.mjs";
+import LoadingState from "@/components/LoadingState";
 
 export default function ProfilePage() {
   const { t } = useLanguage();
@@ -160,7 +161,7 @@ export default function ProfilePage() {
     }
   }
 
-  if (!ready || !user) return <section className="max-w-3xl mx-auto px-4 py-16"><p>{t("Загрузка профиля…")}</p></section>;
+  if (!ready || !user) return <section className="max-w-3xl mx-auto px-4 py-16"><LoadingState label="Загрузка профиля…" /></section>;
 
   return (
     <section className="max-w-4xl mx-auto px-4 py-10 md:py-16">

@@ -3,6 +3,7 @@
 import { useLanguage } from "@/components/LanguageContext";
 
 import { useEffect, useState } from "react";
+import LoadingState from "./LoadingState";
 
 const STORAGE_KEY = "skillbarter-reviews";
 
@@ -64,7 +65,7 @@ export default function Reviews() {
         </div>
         <div className="grid lg:grid-cols-2 gap-8 mt-8 items-start">
           <div className="space-y-5" aria-busy={!ready}>
-            {!ready ? <p role="status">{t("Загружаем отзывы…")}</p> : reviews.length ? reviews.map((review) => (
+            {!ready ? <LoadingState label="Загружаем отзывы…" /> : reviews.length ? reviews.map((review) => (
               <article key={review.id} className="bg-card border-2 border-ink p-5 shs">
                 <div className="flex items-center gap-3">
                   <span aria-hidden="true" className="w-11 h-11 shrink-0 bg-pu text-k border-2 border-ink grid place-items-center font-bold">{review.name.slice(0, 1).toUpperCase()}</span>

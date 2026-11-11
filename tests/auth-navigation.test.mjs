@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { consumeOfferCreationIntent, safeAuthNext } from "../lib/auth-navigation.mjs";
 
 test("login preserves allowed destinations, including profile and offer creation", () => {
-  for (const value of ["/profile", "/services?create=1", "/favorites", "/wallet?tab=history", "/offers/lesson-123", "/offers/figma-basics?returnTo=%2Ffind%3Fq%3DFigma", "/find?cat=Design#results", "/"]) {
+  for (const value of ["/day", "/notifications", "/requests", "/requests/lesson-123", "/profile", "/services?create=1", "/favorites", "/wallet?tab=history", "/offers/lesson-123", "/offers/figma-basics?returnTo=%2Ffind%3Fq%3DFigma", "/find?cat=Design#results", "/"]) {
     assert.equal(safeAuthNext(value), value);
   }
 });

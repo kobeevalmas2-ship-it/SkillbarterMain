@@ -6,7 +6,8 @@ import { useAuth } from "@/components/AuthContext";
 import { useOffers } from "@/components/OffersContext";
 import Art from "@/components/Art";
 import FavoriteButton from "@/components/FavoriteButton";
-import ServiceCheckout from "@/components/ServiceCheckout";
+import RequestComposer from "@/components/RequestComposer";
+import LoadingState from "@/components/LoadingState";
 import { useLanguage } from "@/components/LanguageContext";
 import { catalogReturnHref } from "@/lib/search-filters.mjs";
 
@@ -17,7 +18,7 @@ export default function OfferDetails({ id }) {
   const searchParams = useSearchParams();
   const returnTo = catalogReturnHref(searchParams.get("returnTo"));
   const offer = all.find((item) => item.id === id);
-  if (!ready || !authReady) return <div className="max-w-6xl mx-auto px-4 py-14" role="status">{t("Загружаем услугу…")}</div>;
+  if (!ready || !authReady) return <div className="max-w-6xl mx-auto px-4 py-14"><LoadingState variant="detail" label="Загружаем услугу…" /></div>;
   if (error) return <div className="max-w-6xl mx-auto px-4 py-14"><p role="alert">{t(error)}</p><button onClick={refresh} className="btn bg-y mt-4">{t("Повторить загрузку")}</button></div>;
   if (!offer) return <section className="max-w-3xl mx-auto px-4 py-20">
     <h1 className="font-head font-extrabold text-4xl">{t("Услуга не найдена")}</h1>
@@ -58,9 +59,9 @@ export default function OfferDetails({ id }) {
         <section className="border-2 border-ink bg-card p-5 sm:p-7">
           <h2 className="font-head font-extrabold text-2xl">{t("Как договориться о занятии")}</h2>
           <ol className="list-decimal pl-5 mt-4 space-y-3 text-sm text-ink/75">
-            <li>{t("Свяжитесь с автором по указанной почте и обсудите, какую помощь хотите получить.")}</li>
-            <li>{t("Согласуйте время, формат и длительность занятия.")}</li>
-            <li>{t("Выберите длительность и подтвердите оплату на этой странице. Запись появится в истории кошелька.")}</li>
+            <li>{t("Выберите длительность и желаемое время, затем отправьте заявку автору.")}</li>
+            <li>{t("Обсудите детали в чате заявки и дождитесь подтверждения автора.")}</li>
+            <li>{t("После занятия подтвердите его выполнение. Минуты перейдут автору, а запись появится в кошельке.")}</li>
           </ol>
         </section>
       </div>
@@ -70,7 +71,7 @@ export default function OfferDetails({ id }) {
           <p className="text-sm mt-4">{t("Вы можете изменить описание, формат, город и длительность. Обновления появятся в каталоге и в избранном участников.")}</p>
           <button type="button" onClick={() => openModal(offer)} className="btn bg-b !text-white w-full mt-6">{t("Редактировать услугу")}</button>
           <Link href="/services" className="block mt-5 text-sm underline underline-offset-4">{t("Все мои услуги ↗")}</Link>
-        </section> : <ServiceCheckout key={`${offer.id}:${offer.updatedAt || ""}:${user?.email || "guest"}`} offer={offer} returnTo={returnTo} />}
+        </section> : <RequestComposer key={`${offer.id}:${offer.updatedAt || ""}:${user?.email || "guest"}`} offer={offer} returnTo={returnTo} />}
       </aside>
     </div>
   </div>;

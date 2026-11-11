@@ -43,7 +43,7 @@ export default function OfferCard({ o, returnTo }) {
             </span>
             <span className="shrink-0">★ {t("Новый")}</span>
           </div>
-          <p className="bg-y text-k border-2 border-ink p-2.5 mt-4 text-center text-sm font-bold">{t(own ? "Подробнее об услуге ↗" : "Подробнее и оплата ↗")}</p>
+          <p className="bg-y text-k border-2 border-ink p-2.5 mt-4 text-center text-sm font-bold">{t(own ? "Подробнее об услуге ↗" : "Подробнее и заявка ↗")}</p>
           {own && <button type="button" onClick={() => openModal(o)} className="relative z-10 border-2 border-ink w-full mt-3 px-3 py-2 text-sm font-bold">{t("Редактировать")}</button>}
         </div>
       </div>
