@@ -46,7 +46,7 @@ export default function DayPage() {
       </div>
 
       <div className="flex flex-wrap gap-3 mt-7" aria-label={t("Быстрые действия")}>
-        {[["/requests", "Мои заявки"], ["/services", "Мои услуги"], ["/profile", "Мой профиль"], ["/wallet", "Кошелёк"], ["/support", "Поддержка"], ...(isAdmin ? [["/admin", "Администратор"]] : [])].map(([href, label]) => <Link key={href} href={href} className="border-2 border-ink bg-card px-4 py-2 text-sm font-semibold">{t(label)} ↗</Link>)}
+        {[["/availability", "Свободное время"], ["/requests", "Мои заявки"], ["/services", "Мои услуги"], ["/profile", "Мой профиль"], ["/wallet", "Кошелёк"], ["/support", "Поддержка"], ...(isAdmin ? [["/admin", "Администратор"]] : [])].map(([href, label]) => <Link key={href} href={href} className="border-2 border-ink bg-card px-4 py-2 text-sm font-semibold">{t(label)} ↗</Link>)}
       </div>
 
       {attention.length > 0 && <section aria-labelledby="day-attention-title" className="mt-10"><div className="flex flex-wrap justify-between items-baseline gap-3"><h2 id="day-attention-title" className="font-head font-extrabold text-3xl">{t("Нужно ваше внимание")}</h2><Link href="/requests" className="text-sm underline underline-offset-4">{t("Все заявки ↗")}</Link></div><div className="grid lg:grid-cols-2 gap-6 mt-5">{attention.slice(0, 4).map((request) => <RequestCard key={request.id} request={request} email={user.email} showActions />)}</div></section>}

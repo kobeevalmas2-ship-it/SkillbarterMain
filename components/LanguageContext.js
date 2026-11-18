@@ -13,6 +13,7 @@ const PAGE_TITLES = {
   "/profile": "Профиль — SkillBarter",
   "/wallet": "Кошелёк и история транзакций · SkillBarter",
   "/day": "Мой день — SkillBarter",
+  "/availability": "Свободное время — SkillBarter",
   "/requests": "Заявки — SkillBarter",
   "/notifications": "Уведомления — SkillBarter",
   "/admin": "Администратор — SkillBarter",

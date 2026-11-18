@@ -70,6 +70,7 @@ export default function OfferDetails({ id }) {
           <span className="lbl">{t("Ваше предложение")}</span><h2 className="font-head font-extrabold text-3xl mt-3">{t("Это ваша услуга")}</h2>
           <p className="text-sm mt-4">{t("Вы можете изменить описание, формат, город и длительность. Обновления появятся в каталоге и в избранном участников.")}</p>
           <button type="button" onClick={() => openModal(offer)} className="btn bg-b !text-white w-full mt-6">{t("Редактировать услугу")}</button>
+          <Link href="/availability" className="btn bg-card !text-ink block text-center mt-3">{t("Настроить свободное время")}</Link>
           <Link href="/services" className="block mt-5 text-sm underline underline-offset-4">{t("Все мои услуги ↗")}</Link>
         </section> : <RequestComposer key={`${offer.id}:${offer.updatedAt || ""}:${user?.email || "guest"}`} offer={offer} returnTo={returnTo} />}
       </aside>

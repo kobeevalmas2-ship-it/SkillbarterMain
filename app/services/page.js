@@ -19,7 +19,10 @@ export default function ServicesPage() {
           <h1 className="font-head font-extrabold text-4xl md:text-6xl tracking-tight mt-4">{t("Мои услуги")}</h1>
           <p className="mt-2 text-ink/60">{t("Управляйте тем, чему готовы научить других.")}</p>
         </div>
-        <OpenModalButton>{t("+ Новая услуга")}</OpenModalButton>
+        <div className="flex flex-wrap gap-3">
+          {user && <Link href="/availability" className="btn bg-card !text-ink">{t("Настроить свободное время")}</Link>}
+          <OpenModalButton>{t("+ Новая услуга")}</OpenModalButton>
+        </div>
       </div>
 
       <div className="mt-8">

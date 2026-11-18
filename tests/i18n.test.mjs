@@ -15,11 +15,15 @@ import workflowCore from "../lib/translations-workflow-core.mjs";
 import supportUi from "../lib/translations-support-ui.mjs";
 import adminUi from "../lib/translations-admin-ui.mjs";
 import supportCore from "../lib/translations-support-core.mjs";
+import calendarUi from "../lib/translations-calendar-ui.mjs";
+import availabilityCore from "../lib/translations-availability-core.mjs";
+import availabilityEditor from "../lib/translations-availability-editor.mjs";
+import availabilityPicker from "../lib/translations-availability-picker.mjs";
 import { REQUEST_STATUS_LABELS } from "../lib/requests.mjs";
 import { SUPPORT_STATUS_LABELS } from "../lib/support.mjs";
 import { emptyCatalog, readCatalog, saveOffer, CATALOG_KEY } from "../lib/catalog.mjs";
 
-const dictionaries = { common, catalog, account, homeUx, searchUx, profileUx, offerEditor, appearance, workflowUi, workflowCore, supportUi, adminUi, supportCore };
+const dictionaries = { common, catalog, account, homeUx, searchUx, profileUx, offerEditor, appearance, workflowUi, workflowCore, supportUi, adminUi, supportCore, calendarUi, availabilityCore, availabilityEditor, availabilityPicker };
 const entries = Object.assign({}, ...Object.values(dictionaries));
 const placeholders = (message) => [...new Set([...message.matchAll(/\{(\w+)\}/g)].map((match) => match[1]))].sort();
 
@@ -78,6 +82,7 @@ test("the updated user journeys declare translations for their static interface 
     "app/day/page.js", "app/notifications/page.js", "app/requests/page.js", "app/requests/[id]/page.js",
     "app/admin/page.js", "app/support/page.js", "app/support/[id]/page.js", "components/SupportPanel.js", "components/SupportContext.js",
     "components/ThemeSwitcher.js", "components/LoadingState.js", "components/Header.js",
+    "app/availability/page.js", "components/AvailabilityEditor.js", "components/AvailabilityPicker.js", "components/DateCalendar.js", "app/services/page.js",
     ...readdirSync(new URL("../components/", import.meta.url)).filter((name) => /^Request.*\.js$/.test(name)).map((name) => `components/${name}`),
   ]) {
     const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
@@ -100,7 +105,7 @@ test("support states and administrator errors have translations in all interface
 });
 
 test("request states and domain errors have translations for all supported interface languages", () => {
-  const source = readFileSync(new URL("../lib/requests.mjs", import.meta.url), "utf8");
+  const source = ["requests.mjs", "availability.mjs"].map((file) => readFileSync(new URL(`../lib/${file}`, import.meta.url), "utf8")).join("\n");
   const errors = [...source.matchAll(/new Error\(("(?:[^"\\]|\\.)*")\)/g)].map((match) => JSON.parse(match[1]));
   for (const message of [...Object.values(REQUEST_STATUS_LABELS), ...errors]) {
     assert.ok(Object.hasOwn(entries, message), `missing workflow translation for ${message}`);

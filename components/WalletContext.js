@@ -7,6 +7,7 @@ import { allOffers, readCatalog, serviceQuote } from "@/lib/catalog.mjs";
 import { OFFERS } from "./data";
 import { availableBalanceFor, readActivity, reservedFor } from "@/lib/requests.mjs";
 import { readSupport } from "@/lib/support.mjs";
+import { readAvailability } from "@/lib/availability.mjs";
 import { isAdminActor, restoreSessionProfile } from "@/lib/admin-auth.mjs";
 
 const WalletContext = createContext(null);
@@ -40,6 +41,7 @@ export function WalletProvider({ children }) {
         const previous = readLedger(localStorage);
         readActivity(previous);
         readSupport(previous);
+        readAvailability(previous);
         const ledger = ensureAccount(previous, user);
         const participants = readParticipants(ledger);
         if (ledger !== previous) localStorage.setItem(WALLET_KEY, JSON.stringify(ledger));
@@ -77,9 +79,11 @@ export function WalletProvider({ children }) {
       const previous = readLedger(localStorage);
       readActivity(previous);
       readSupport(previous);
+      readAvailability(previous);
       const next = update(ensureAccount(previous, user));
       readActivity(next);
       readSupport(next);
+      readAvailability(next);
       if (next !== previous) {
         const participants = readParticipants(next);
         // Requests, messages, reservations and both balances commit in one write.
