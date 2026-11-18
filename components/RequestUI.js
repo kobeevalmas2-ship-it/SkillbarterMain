@@ -9,7 +9,7 @@ import { REQUEST_STATUS_LABELS, allowedRequestActions } from "@/lib/requests.mjs
 
 const STATUS_COLORS = {
   pending: "bg-y", accepted: "bg-lb", in_progress: "bg-pu", awaiting_confirmation: "bg-y",
-  completed: "bg-lb", declined: "bg-co", cancelled: "bg-co",
+  completed: "bg-lb", declined: "bg-co", cancelled: "bg-co", refunded: "bg-lb",
 };
 const ACTION_LABELS = {
   accepted: "Принять заявку", declined: "Отклонить", cancelled: "Отменить заявку",

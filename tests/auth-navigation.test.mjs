@@ -3,13 +3,13 @@ import assert from "node:assert/strict";
 import { consumeOfferCreationIntent, safeAuthNext } from "../lib/auth-navigation.mjs";
 
 test("login preserves allowed destinations, including profile and offer creation", () => {
-  for (const value of ["/day", "/notifications", "/requests", "/requests/lesson-123", "/profile", "/services?create=1", "/favorites", "/wallet?tab=history", "/offers/lesson-123", "/offers/figma-basics?returnTo=%2Ffind%3Fq%3DFigma", "/find?cat=Design#results", "/"]) {
+  for (const value of ["/admin", "/support", "/support/case-123", "/day", "/notifications", "/requests", "/requests/lesson-123", "/profile", "/services?create=1", "/favorites", "/wallet?tab=history", "/offers/lesson-123", "/offers/figma-basics?returnTo=%2Ffind%3Fq%3DFigma", "/find?cat=Design#results", "/"]) {
     assert.equal(safeAuthNext(value), value);
   }
 });
 
 test("login rejects external destinations and malformed or unknown paths", () => {
-  for (const value of [null, undefined, {}, "https://example.com", "//example.com/profile", "/\\example.com", "/profile\n", "/profile/extra", "/admin", "/offers/", "/%2f%2fexample.com", "javascript:alert(1)"]) {
+  for (const value of [null, undefined, {}, "https://example.com", "//example.com/profile", "/\\example.com", "/profile\n", "/profile/extra", "/admin/unknown", "/offers/", "/%2f%2fexample.com", "javascript:alert(1)"]) {
     assert.equal(safeAuthNext(value), "/", String(value));
   }
 });

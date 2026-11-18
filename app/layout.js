@@ -10,6 +10,7 @@ import { cookies } from "next/headers";
 import { LANGUAGE_COOKIE, normalizeLanguage, translate } from "@/lib/i18n.mjs";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { RequestsProvider } from "@/components/RequestsContext";
+import { SupportProvider } from "@/components/SupportContext";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"], variable: "--font-inter" });
 const head = Inter_Tight({ subsets: ["latin", "cyrillic"], weight: ["600", "800"], variable: "--font-head" });
@@ -32,11 +33,13 @@ export default function RootLayout({ children }) {
             <AuthProvider>
               <WalletProvider>
                 <RequestsProvider>
-                  <OffersProvider>
-                    <Header />
-                    <main>{children}</main>
-                    <Footer />
-                  </OffersProvider>
+                  <SupportProvider>
+                    <OffersProvider>
+                      <Header />
+                      <main>{children}</main>
+                      <Footer />
+                    </OffersProvider>
+                  </SupportProvider>
                 </RequestsProvider>
               </WalletProvider>
             </AuthProvider>

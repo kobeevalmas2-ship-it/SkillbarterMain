@@ -6,6 +6,8 @@ import { useAuth } from "@/components/AuthContext";
 import { useLanguage } from "@/components/LanguageContext";
 import { useRequests } from "@/components/RequestsContext";
 import { RequestActions, RequestStatus, requestDate, WorkflowGate } from "@/components/RequestUI";
+import SupportPanel from "@/components/SupportPanel";
+import { ADMIN_EMAIL } from "@/lib/admin-auth.mjs";
 
 const STATUS_HINTS = {
   pending: "Заявка отправлена. Исполнитель может принять её или предложить обсудить условия в чате.",
@@ -15,11 +17,12 @@ const STATUS_HINTS = {
   completed: "Обмен завершён. Минуты переведены исполнителю, запись сохранена в кошельке.",
   declined: "Исполнитель отклонил заявку. Можно найти другое предложение в каталоге.",
   cancelled: "Заявка отменена. Зарезервированные минуты снова доступны для обмена.",
+  refunded: "Минуты за это занятие возвращены заказчику решением администратора.",
 };
 
 export default function RequestDetailPage({ params }) {
   const { t, locale } = useLanguage();
-  const { user, ready: authReady } = useAuth();
+  const { user, ready: authReady, isAdmin } = useAuth();
   const { requests = [], notifications = [], getMessages, ready, error, refresh, sendMessage, markRequestRead } = useRequests();
   const request = requests.find((item) => item.id === params.id);
   const messages = request ? getMessages(request.id) : [];
@@ -75,12 +78,14 @@ export default function RequestDetailPage({ params }) {
             <RequestActions key={request.id} request={request} email={user.email} />
             <Link href={`/offers/${request.offerId}`} className="inline-block text-sm font-semibold underline underline-offset-4 mt-5">{t("Открыть предложение ↗")}</Link>
           </section>
+          <SupportPanel request={request} />
           <section className="border-2 border-ink bg-card shs" aria-labelledby="request-chat-title">
             <div className="p-5 sm:p-6 border-b-2 border-ink"><h2 id="request-chat-title" className="font-head font-extrabold text-2xl">{t("Чат по заявке")}</h2><p className="text-sm text-ink/65 mt-2">{t("Обсудите ожидания, место встречи и материалы для занятия.")}</p></div>
             <div ref={chatList} className="max-h-[480px] min-h-48 overflow-y-auto p-4 sm:p-6" role="log" aria-label={t("Сообщения по заявке")} aria-live="polite" aria-relevant="additions">
               {messages.length ? <ol className="space-y-4">{messages.map((message) => {
                 const own = message.authorEmail === user.email;
-                const seen = message.readBy?.some((email) => email !== message.authorEmail);
+                const recipient = message.authorEmail === request.customer.email ? request.provider.email : request.customer.email;
+                const seen = message.readBy?.includes(recipient);
                 return <li key={message.id} className={`flex ${own ? "justify-end" : "justify-start"}`}><article className={`border-2 border-ink p-3 sm:p-4 max-w-[92%] sm:max-w-[85%] min-w-0 ${own ? "bg-lb text-k" : "bg-bg"}`}>
                   <p className="text-xs font-bold break-words">{own ? t("Вы") : message.authorName}</p><p className="whitespace-pre-wrap break-words text-sm leading-relaxed mt-2">{message.text}</p><p className="text-xs opacity-65 mt-3"><time dateTime={message.createdAt}>{requestDate(message.createdAt, locale)}</time>{own && <span> · {t(seen ? "Прочитано" : "Отправлено")}</span>}</p>
                 </article></li>;
@@ -97,8 +102,8 @@ export default function RequestDetailPage({ params }) {
         </div>
         <aside className="border-2 border-ink bg-card p-5 sm:p-6 min-w-0" aria-labelledby="request-history-title"><h2 id="request-history-title" className="font-head font-extrabold text-2xl">{t("История заявки")}</h2><ol className="mt-5 space-y-5">{request.history.map((event, index) => {
           const author = [request.customer, request.provider].find((participant) => participant.email === event.by);
-          return <li key={`${event.createdAt}:${index}`} className="border-l-2 border-ink pl-4"><RequestStatus status={event.status} /><p className="text-sm font-semibold break-words mt-2">{author?.name || event.by}</p><time dateTime={event.createdAt} className="text-xs text-ink/60 mt-1 block">{requestDate(event.createdAt, locale)}</time></li>;
-        })}</ol><Link href="/wallet" className="inline-block text-sm underline underline-offset-4 mt-7">{t("Открыть кошелёк ↗")}</Link></aside>
+          return <li key={`${event.createdAt}:${index}`} className="border-l-2 border-ink pl-4"><RequestStatus status={event.status} /><p className="text-sm font-semibold break-words mt-2">{event.by === ADMIN_EMAIL ? t("Администратор поддержки") : author?.name || event.by}</p>{event.reason && <p className="text-sm mt-2 whitespace-pre-wrap break-words">{event.reason}</p>}<time dateTime={event.createdAt} className="text-xs text-ink/60 mt-1 block">{requestDate(event.createdAt, locale)}</time></li>;
+        })}</ol><Link href="/wallet" className="inline-block text-sm underline underline-offset-4 mt-7">{t("Открыть кошелёк ↗")}</Link>{isAdmin && <Link href="/admin" className="block underline mt-4 text-sm">{t("Открыть панель администратора")}</Link>}</aside>
       </div>
     </section>}
   </WorkflowGate>;

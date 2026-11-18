@@ -10,6 +10,7 @@ import { normalizeEmail } from "@/lib/wallet.mjs";
 import LoadingState from "@/components/LoadingState";
 
 const FILTERS = [["all", "Все операции"], ["incoming", "Поступления"], ["outgoing", "Списания"]];
+const TRANSACTION_LABELS = { bonus: "Стартовый бонус", service: "Оплата услуги", refund: "Возврат минут", admin_adjustment: "Перевод администратора" };
 
 export default function WalletClient(props) {
   const { t } = useLanguage();
@@ -110,7 +111,7 @@ function WalletDashboard({ user, initialRecipient, initialMinutes, initialServic
       <div className="bg-y text-k border-2 border-ink p-6 sh">
         <p className="lbl">{t("Доступно для обмена")}</p>
         <p className="font-head font-extrabold text-5xl mt-3">{balance.toLocaleString(locale)} <span className="text-xl">{t("мин")}</span></p>
-        <p className="text-sm mt-3">{t("{hours} ч {minutes} мин вашего времени", { hours: Math.floor(balance / 60), minutes: balance % 60 })}</p>
+        <p className="text-sm mt-3">{balance < 0 ? t("Задолженность {minutes} мин. Новые поступления уменьшают её.", { minutes: Math.abs(balance) }) : t("{hours} ч {minutes} мин вашего времени", { hours: Math.floor(balance / 60), minutes: balance % 60 })}</p>
         {reserved > 0 && <p className="text-sm mt-3 border-t-2 border-ink pt-3">{t("Всего: {total} мин · В резерве: {reserved} мин", { total: totalBalance, reserved })}<Link href="/requests" className="block underline mt-1">{t("Посмотреть согласованные заявки")}</Link></p>}
       </div>
       <div className="bg-lb text-k border-2 border-ink p-6">
@@ -156,7 +157,7 @@ function WalletDashboard({ user, initialRecipient, initialMinutes, initialServic
           {error && <p role="alert" className="border-2 border-ink bg-co text-k text-sm p-3">{t(error)}</p>}
           <button className="btn bg-b !text-white disabled:opacity-50" type="submit" disabled={busy || (!review && balance <= 0)}>{busy ? t("Переводим…") : review ? t("Подтвердить · {minutes} мин ↗", { minutes: review.minutes }) : t("Продолжить ↗")}</button>
           {review && <button type="button" className="underline text-sm underline-offset-4 disabled:opacity-50" disabled={busy} onClick={() => { setReview(null); setError(""); }}>{t("Изменить перевод")}</button>}
-          {balance <= 0 && !review && <p className="text-sm text-ink/65">{t("Минуты закончились. Предложите свою помощь, чтобы получить время от других участников.")}</p>}
+          {balance <= 0 && !review && <p className="text-sm text-ink/65">{t(balance < 0 ? "Переводы станут доступны после погашения задолженности." : "Минуты закончились. Предложите свою помощь, чтобы получить время от других участников.")}</p>}
         </form>
         <div role="status" aria-live="polite">
           {success && <p className="mt-4 border-2 border-ink bg-lb text-k p-3 text-sm break-words"><b>{t("Перевод выполнен!")}</b><br />{t("{minutes} мин → {name}. Операция сохранена в истории.", { minutes: success.minutes, name: participantName(success.to) })}</p>}
@@ -183,12 +184,13 @@ function WalletDashboard({ user, initialRecipient, initialMinutes, initialServic
                 <span aria-hidden="true" className={`shrink-0 w-10 h-10 border-2 border-ink grid place-items-center text-xl text-k ${tx.type === "bonus" ? "bg-y" : incoming ? "bg-lb" : "bg-pu"}`}>{tx.type === "bonus" ? "✦" : incoming ? "↙" : "↗"}</span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap justify-between gap-x-3 gap-y-1">
-                    <h3 className="font-bold break-words">{t(tx.type === "bonus" ? "Стартовый бонус" : tx.type === "service" ? "Оплата услуги" : incoming ? "Входящий перевод" : "Исходящий перевод")}</h3>
+                    <h3 className="font-bold break-words">{t(TRANSACTION_LABELS[tx.type] || (incoming ? "Входящий перевод" : "Исходящий перевод"))}</h3>
                     <p className="font-mono font-bold whitespace-nowrap">{incoming ? "+" : "−"}{tx.minutes} {t("мин")}</p>
                   </div>
                   <p className="text-sm mt-1 break-words">{counterpart ? t(incoming ? "От: {name}" : "Кому: {name}", { name: participantName(counterpart) }) : t("Добро пожаловать в SkillBarter")}</p>
                   {counterpart && <p className="text-xs text-ink/55 break-all mt-1">{counterpart}</p>}
-                  <p className="text-sm text-ink/65 mt-2 break-words">{tx.offerId ? <Link href={`/offers/${tx.offerId}`} className="underline underline-offset-4">{tx.note}</Link> : tx.type === "bonus" ? t("Стартовые минуты за регистрацию") : tx.note || t("Перевод минут")}</p>
+                  <p className="text-sm text-ink/65 mt-2 break-words">{tx.requestId ? <Link href={`/requests/${tx.requestId}`} className="underline underline-offset-4">{t(tx.note)}</Link> : tx.offerId ? <Link href={`/offers/${tx.offerId}`} className="underline underline-offset-4">{tx.note}</Link> : tx.type === "bonus" ? t("Стартовые минуты за регистрацию") : tx.type === "admin_adjustment" ? t(tx.note) : tx.note || t("Перевод минут")}</p>
+                  {tx.reason && <p className="text-sm mt-2 break-words"><span className="font-semibold">{t("Основание решения")}</span> · {tx.reason}</p>}
                   <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink/60 mt-3"><time dateTime={tx.createdAt}>{dateFormat.format(new Date(tx.createdAt))}</time><span>{t("✓ Выполнено")}</span></div>
                   <details className="mt-2 text-xs text-ink/55"><summary className="cursor-pointer">{t("Номер операции")}</summary><p className="font-mono break-all mt-1 select-all">{tx.id}</p></details>
                 </div>

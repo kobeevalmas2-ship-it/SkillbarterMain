@@ -35,10 +35,9 @@ export default function LoginPage() {
     }
     setBusy(true);
     try {
-      if (isRegister) register(values);
-      else login(values);
+      const profile = isRegister ? register(values) : login(values);
       const next = new URLSearchParams(window.location.search).get("next");
-      router.push(next ? safeAuthNext(next) : "/day");
+      router.push(next ? safeAuthNext(next) : profile.role === "admin" ? "/admin" : "/day");
     } catch (err) {
       const message = err.message || "Что-то пошло не так. Попробуйте ещё раз.";
       if (message === "Этот адрес электронной почты уже зарегистрирован. Войдите в аккаунт.") {

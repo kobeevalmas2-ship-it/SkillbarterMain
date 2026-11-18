@@ -1,10 +1,18 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { ensureAdminAccount, isAdminActor, profileFromAccount, registeredAccount, restoreSessionProfile, startAccountSession, updateAccountProfile } from "@/lib/admin-auth.mjs";
 
 const AuthContext = createContext(null);
 const USERS_KEY = "skillbarter-users";
 const SESSION_KEY = "skillbarter-session";
+
+function readUsers() {
+  const previous = JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
+  const users = ensureAdminAccount(previous);
+  if (users !== previous) localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  return users;
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -13,8 +21,9 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     function restoreSession() {
       try {
-        const session = localStorage.getItem(SESSION_KEY);
-        setUser(session ? JSON.parse(session) : null);
+        const users = readUsers();
+        const session = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+        setUser(restoreSessionProfile(users, session));
       } catch {
         setUser(null);
       }
@@ -22,41 +31,44 @@ export function AuthProvider({ children }) {
     }
     restoreSession();
     const onStorage = (event) => {
-      if (!event.key || event.key === SESSION_KEY) restoreSession();
+      if (!event.key || event.key === SESSION_KEY || event.key === USERS_KEY) restoreSession();
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  function register({ name, email, password }) {
-    const users = JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
-    const normalizedEmail = email.trim().toLowerCase();
-    if (users.some((item) => item.email === normalizedEmail)) {
+  function register(values) {
+    const users = readUsers();
+    const account = registeredAccount(values, crypto.randomUUID());
+    if (users.some((item) => item.email.trim().toLowerCase() === account.email)) {
       throw new Error("Этот адрес электронной почты уже зарегистрирован. Войдите в аккаунт.");
     }
-    const account = { name: name.trim(), email: normalizedEmail, password };
     localStorage.setItem(USERS_KEY, JSON.stringify([...users, account]));
-    const profile = { name: account.name, email: account.email };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(profile));
+    const profile = profileFromAccount(account);
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...profile, token: account.sessionToken }));
     setUser(profile);
+    return profile;
   }
 
-  function login({ email, password }) {
-    const users = JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
-    const account = users.find((item) => item.email === email.trim().toLowerCase() && item.password === password);
-    if (!account) throw new Error("Неверный адрес электронной почты или пароль.");
-    const { password: _password, ...profile } = account;
-    localStorage.setItem(SESSION_KEY, JSON.stringify(profile));
-    setUser(profile);
+  function login(values) {
+    const result = startAccountSession(readUsers(), values, crypto.randomUUID());
+    localStorage.setItem(USERS_KEY, JSON.stringify(result.users));
+    localStorage.setItem(SESSION_KEY, JSON.stringify(result.session));
+    setUser(result.profile);
+    return result.profile;
   }
 
   function updateProfile(changes) {
     if (!user) throw new Error("Войдите в аккаунт.");
-    const users = JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
-    const profile = { ...user, ...changes, email: user.email };
-    localStorage.setItem(USERS_KEY, JSON.stringify(users.map((item) =>
-      item.email === user.email ? { ...item, ...changes, email: user.email } : item)));
-    localStorage.setItem(SESSION_KEY, JSON.stringify(profile));
+    const users = readUsers();
+    const session = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+    const current = restoreSessionProfile(users, session);
+    if (current?.email !== user.email) throw new Error("Аккаунт изменился. Обновите страницу и войдите снова.");
+    const account = users.find((item) => item.email.trim().toLowerCase() === user.email);
+    const updated = updateAccountProfile(account, changes);
+    const profile = profileFromAccount(updated);
+    localStorage.setItem(USERS_KEY, JSON.stringify(users.map((item) => item === account ? updated : item)));
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...profile, token: updated.sessionToken }));
     setUser(profile);
   }
 
@@ -65,7 +77,7 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
-  return <AuthContext.Provider value={{ user, ready, register, login, logout, updateProfile }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, ready, register, login, logout, updateProfile, isAdmin: isAdminActor(user) }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

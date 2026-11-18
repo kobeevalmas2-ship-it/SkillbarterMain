@@ -7,19 +7,22 @@ import { useLanguage } from "./LanguageContext";
 import LanguageSwitcher from "./LanguageSwitcher";
 import ThemeSwitcher from "./ThemeSwitcher";
 import { useRequests } from "./RequestsContext";
+import { useSupport } from "./SupportContext";
 
 const LINKS = [["/", "ГЛАВНАЯ"], ["/find", "НАЙТИ ПОМОЩЬ"], ["/services", "МОИ УСЛУГИ"], ["/favorites", "ИЗБРАННОЕ"], ["/wallet", "КОШЕЛЁК"]];
 
 export default function Header() {
   const { t } = useLanguage();
   const path = usePathname();
-  const { user, ready, logout } = useAuth();
+  const { user, ready, logout, isAdmin } = useAuth();
   const { balance, ready: walletReady } = useWallet();
   const { unreadCount, unreadMessages } = useRequests();
-  const navigation = user ? [["/day", "МОЙ ДЕНЬ"], ["/requests", "ЗАЯВКИ"], ...LINKS] : LINKS;
+  const { cases = [], ready: supportReady } = useSupport();
+  const openComplaints = isAdmin && supportReady ? cases.filter((item) => ["open", "reviewing"].includes(item.status)).length : 0;
+  const navigation = user ? [["/day", "МОЙ ДЕНЬ"], ["/requests", "ЗАЯВКИ"], ["/support", "ПОДДЕРЖКА"], ...(isAdmin ? [["/admin", "АДМИНИСТРАТОР"]] : []), ...LINKS] : LINKS;
   const links = (cls) =>
     navigation.map(([href, label]) => (
-      <Link key={href} href={href} className={`shrink-0 px-3 py-2 whitespace-nowrap ${path === href || (href === "/requests" && path.startsWith("/requests/")) ? "nav-on" : ""} ${cls}`}>{t(label)}{href === "/requests" && unreadMessages > 0 && <span className="ml-1 bg-b text-white px-1.5" aria-label={t("Непрочитанных сообщений: {count}", { count: unreadMessages })}>{unreadMessages > 99 ? "99+" : unreadMessages}</span>}</Link>
+      <Link key={href} href={href} className={`shrink-0 px-3 py-2 whitespace-nowrap ${path === href || (["/requests", "/support", "/admin"].includes(href) && path.startsWith(`${href}/`)) ? "nav-on" : ""} ${cls}`}>{t(label)}{href === "/requests" && unreadMessages > 0 && <span className="ml-1 bg-b text-white px-1.5" aria-label={t("Непрочитанных сообщений: {count}", { count: unreadMessages })}>{unreadMessages > 99 ? "99+" : unreadMessages}</span>}{href === "/admin" && openComplaints > 0 && <span className="ml-1 bg-b text-white px-1.5" aria-label={t("Жалоб без решения: {count}", { count: openComplaints })}>{openComplaints > 99 ? "99+" : openComplaints}</span>}</Link>
     ));
   return (
     <header className="sticky top-0 z-20 bg-bg border-b-2 border-ink">

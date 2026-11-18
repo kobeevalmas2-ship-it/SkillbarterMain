@@ -15,6 +15,8 @@ const PAGE_TITLES = {
   "/day": "Мой день — SkillBarter",
   "/requests": "Заявки — SkillBarter",
   "/notifications": "Уведомления — SkillBarter",
+  "/admin": "Администратор — SkillBarter",
+  "/support": "Поддержка — SkillBarter",
 };
 
 export function LanguageProvider({ children, initialLanguage = "ru" }) {
@@ -47,7 +49,9 @@ export function LanguageProvider({ children, initialLanguage = "ru" }) {
 
   useEffect(() => {
     document.documentElement.lang = language;
-    document.title = t(PAGE_TITLES[path] || (path?.startsWith("/requests/") ? "Заявка и чат — SkillBarter" : path?.startsWith("/offers/") ? "Услуга · SkillBarter" : "SkillBarter"));
+    const detailTitle = path?.startsWith("/support/") ? "Обращение в поддержку — SkillBarter" :
+      path?.startsWith("/requests/") ? "Заявка и чат — SkillBarter" : path?.startsWith("/offers/") ? "Услуга · SkillBarter" : "SkillBarter";
+    document.title = t(PAGE_TITLES[path] || detailTitle);
     const description = document.querySelector('meta[name="description"]');
     if (description) description.content = t(path?.startsWith("/offers/") ? "Подробности услуги и оплата временем" : "Обмен навыками за время");
   }, [language, path, t]);

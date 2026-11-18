@@ -12,10 +12,14 @@ import offerEditor from "../lib/translations-offer-editor.mjs";
 import appearance from "../lib/translations-appearance.mjs";
 import workflowUi from "../lib/translations-workflow-ui.mjs";
 import workflowCore from "../lib/translations-workflow-core.mjs";
+import supportUi from "../lib/translations-support-ui.mjs";
+import adminUi from "../lib/translations-admin-ui.mjs";
+import supportCore from "../lib/translations-support-core.mjs";
 import { REQUEST_STATUS_LABELS } from "../lib/requests.mjs";
+import { SUPPORT_STATUS_LABELS } from "../lib/support.mjs";
 import { emptyCatalog, readCatalog, saveOffer, CATALOG_KEY } from "../lib/catalog.mjs";
 
-const dictionaries = { common, catalog, account, homeUx, searchUx, profileUx, offerEditor, appearance, workflowUi, workflowCore };
+const dictionaries = { common, catalog, account, homeUx, searchUx, profileUx, offerEditor, appearance, workflowUi, workflowCore, supportUi, adminUi, supportCore };
 const entries = Object.assign({}, ...Object.values(dictionaries));
 const placeholders = (message) => [...new Set([...message.matchAll(/\{(\w+)\}/g)].map((match) => match[1]))].sort();
 
@@ -72,6 +76,7 @@ test("the updated user journeys declare translations for their static interface 
     "app/page.js", "app/find/FindClient.js", "components/OfferCard.js",
     "components/NewOfferModal.js", "app/login/page.js", "app/profile/page.js",
     "app/day/page.js", "app/notifications/page.js", "app/requests/page.js", "app/requests/[id]/page.js",
+    "app/admin/page.js", "app/support/page.js", "app/support/[id]/page.js", "components/SupportPanel.js", "components/SupportContext.js",
     "components/ThemeSwitcher.js", "components/LoadingState.js", "components/Header.js",
     ...readdirSync(new URL("../components/", import.meta.url)).filter((name) => /^Request.*\.js$/.test(name)).map((name) => `components/${name}`),
   ]) {
@@ -80,6 +85,17 @@ test("the updated user journeys declare translations for their static interface 
       const message = JSON.parse(match[1]);
       assert.ok(Object.hasOwn(entries, message), `${file}: missing translations for ${message}`);
     }
+  }
+});
+
+test("support states and administrator errors have translations in all interface languages", () => {
+  const errors = ["support.mjs", "admin-auth.mjs"].flatMap((file) => {
+    const source = readFileSync(new URL(`../lib/${file}`, import.meta.url), "utf8");
+    return [...source.matchAll(/new Error\(("(?:[^"\\]|\\.)*")\)/g)].map((match) => JSON.parse(match[1]));
+  });
+  for (const message of [...Object.values(SUPPORT_STATUS_LABELS), ...errors]) {
+    assert.ok(Object.hasOwn(entries, message), `missing support translation for ${message}`);
+    for (const language of ["kk", "en"]) assert.equal(translate(language, message), entries[message][language]);
   }
 });
 

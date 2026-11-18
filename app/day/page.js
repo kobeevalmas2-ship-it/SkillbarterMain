@@ -14,7 +14,7 @@ function notificationText(notification, t) {
 
 export default function DayPage() {
   const { t, locale } = useLanguage();
-  const { user, ready: authReady } = useAuth();
+  const { user, ready: authReady, isAdmin } = useAuth();
   const { requests = [], notifications = [], unreadCount, unreadMessages, ready, error, refresh } = useRequests();
   const { balance, reserved = 0, ready: walletReady, error: walletError, refresh: refreshWallet } = useWallet();
   const [now, setNow] = useState(null);
@@ -46,7 +46,7 @@ export default function DayPage() {
       </div>
 
       <div className="flex flex-wrap gap-3 mt-7" aria-label={t("Быстрые действия")}>
-        {[["/requests", "Мои заявки"], ["/services", "Мои услуги"], ["/profile", "Мой профиль"], ["/wallet", "Кошелёк"]].map(([href, label]) => <Link key={href} href={href} className="border-2 border-ink bg-card px-4 py-2 text-sm font-semibold">{t(label)} ↗</Link>)}
+        {[["/requests", "Мои заявки"], ["/services", "Мои услуги"], ["/profile", "Мой профиль"], ["/wallet", "Кошелёк"], ["/support", "Поддержка"], ...(isAdmin ? [["/admin", "Администратор"]] : [])].map(([href, label]) => <Link key={href} href={href} className="border-2 border-ink bg-card px-4 py-2 text-sm font-semibold">{t(label)} ↗</Link>)}
       </div>
 
       {attention.length > 0 && <section aria-labelledby="day-attention-title" className="mt-10"><div className="flex flex-wrap justify-between items-baseline gap-3"><h2 id="day-attention-title" className="font-head font-extrabold text-3xl">{t("Нужно ваше внимание")}</h2><Link href="/requests" className="text-sm underline underline-offset-4">{t("Все заявки ↗")}</Link></div><div className="grid lg:grid-cols-2 gap-6 mt-5">{attention.slice(0, 4).map((request) => <RequestCard key={request.id} request={request} email={user.email} showActions />)}</div></section>}
@@ -56,7 +56,7 @@ export default function DayPage() {
           {upcoming.length ? <div className="grid gap-5 mt-5">{upcoming.slice(0, 4).map((request) => <RequestCard key={request.id} request={request} email={user.email} />)}</div> : <div className="border-2 border-dashed border-ink p-7 mt-5"><h3 className="font-head font-extrabold text-2xl">{t("Пока всё свободно")}</h3><p className="text-sm text-ink/65 mt-3">{t("Выберите навык, который хотите освоить, и договоритесь о первом занятии.")}</p><Link href="/find" className="btn bg-y inline-block mt-5">{t("Выбрать навык ↗")}</Link></div>}
         </section>
         <section className="border-2 border-ink bg-card p-5 sm:p-6 min-w-0" aria-labelledby="day-updates-title"><h2 id="day-updates-title" className="font-head font-extrabold text-2xl">{t("Последние события")}</h2>
-          {recentNotifications.length ? <ul className="divide-y-2 divide-ink mt-3">{recentNotifications.map((notification) => <li key={notification.id} className="py-4"><Link href={`/requests/${notification.requestId}`} className="font-semibold text-sm break-words underline-offset-4 hover:underline">{!notification.readAt && <span aria-label={t("Непрочитано")} className="inline-block w-2 h-2 bg-acc mr-2" />}{notificationText(notification, t)}</Link><time className="block text-xs text-ink/60 mt-2" dateTime={notification.createdAt}>{requestDate(notification.createdAt, locale)}</time></li>)}</ul> : <p className="text-sm text-ink/65 mt-4">{t("Здесь появятся новости о ваших заявках и сообщениях.")}</p>}
+          {recentNotifications.length ? <ul className="divide-y-2 divide-ink mt-3">{recentNotifications.map((notification) => <li key={notification.id} className="py-4"><Link href={notification.type === "support" ? notification.caseId ? `/support/${notification.caseId}` : "/support" : `/requests/${notification.requestId}`} className="font-semibold text-sm break-words underline-offset-4 hover:underline">{!notification.readAt && <span aria-label={t("Непрочитано")} className="inline-block w-2 h-2 bg-acc mr-2" />}{notificationText(notification, t)}</Link><time className="block text-xs text-ink/60 mt-2" dateTime={notification.createdAt}>{requestDate(notification.createdAt, locale)}</time></li>)}</ul> : <p className="text-sm text-ink/65 mt-4">{t("Здесь появятся обновления заявок, сообщения и ответы поддержки.")}</p>}
           <Link href="/notifications" className="inline-block text-sm font-semibold underline underline-offset-4 mt-5">{t("Все уведомления ↗")}</Link>
         </section>
       </div>

@@ -6,6 +6,8 @@ import { WALLET_KEY, DEMO_PARTICIPANTS, balanceFor, createTransfer, emptyLedger,
 import { allOffers, readCatalog, serviceQuote } from "@/lib/catalog.mjs";
 import { OFFERS } from "./data";
 import { availableBalanceFor, readActivity, reservedFor } from "@/lib/requests.mjs";
+import { readSupport } from "@/lib/support.mjs";
+import { isAdminActor, restoreSessionProfile } from "@/lib/admin-auth.mjs";
 
 const WalletContext = createContext(null);
 
@@ -37,6 +39,7 @@ export function WalletProvider({ children }) {
       await withWalletLock(() => {
         const previous = readLedger(localStorage);
         readActivity(previous);
+        readSupport(previous);
         const ledger = ensureAccount(previous, user);
         const participants = readParticipants(ledger);
         if (ledger !== previous) localStorage.setItem(WALLET_KEY, JSON.stringify(ledger));
@@ -66,11 +69,17 @@ export function WalletProvider({ children }) {
     if (!user) throw new Error("Войдите в аккаунт для перевода.");
     return withWalletLock(() => {
       const session = JSON.parse(localStorage.getItem("skillbarter-session") || "null");
-      if (session?.email !== user.email) throw new Error("Аккаунт изменился. Обновите страницу и войдите снова.");
+      const accounts = JSON.parse(localStorage.getItem("skillbarter-users") || "[]");
+      const verified = restoreSessionProfile(accounts, session);
+      if (verified?.email !== user.email || isAdminActor(verified) !== isAdminActor(user)) {
+        throw new Error("Аккаунт изменился. Обновите страницу и войдите снова.");
+      }
       const previous = readLedger(localStorage);
       readActivity(previous);
+      readSupport(previous);
       const next = update(ensureAccount(previous, user));
       readActivity(next);
+      readSupport(next);
       if (next !== previous) {
         const participants = readParticipants(next);
         // Requests, messages, reservations and both balances commit in one write.

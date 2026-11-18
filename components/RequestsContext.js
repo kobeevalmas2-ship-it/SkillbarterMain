@@ -11,10 +11,10 @@ import { addRequestMessage, createRequest as addRequest, markAllNotificationsRea
 const RequestsContext = createContext(null);
 
 export function RequestsProvider({ children }) {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { ready, error, refresh, ledger, mutateLedger } = useWallet();
   const activity = useMemo(() => readActivity(ledger), [ledger]);
-  const requests = useMemo(() => user ? activity.requests.filter((r) => [r.customer.email, r.provider.email].includes(user.email)) : [], [activity, user]);
+  const requests = useMemo(() => user ? activity.requests.filter((r) => isAdmin || [r.customer.email, r.provider.email].includes(user.email)) : [], [activity, user, isAdmin]);
   const notifications = useMemo(() => user ? activity.notifications.filter((n) => n.recipient === user.email) : [], [activity, user]);
   const requestIds = useMemo(() => new Set(requests.map((r) => r.id)), [requests]);
   const getMessages = useCallback((id) => requestIds.has(id) ? activity.messages.filter((m) => m.requestId === id) : [], [activity, requestIds]);
