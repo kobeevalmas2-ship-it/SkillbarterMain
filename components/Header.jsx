@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/AuthContext";
 import { useWallet } from "@/components/WalletContext";
@@ -15,6 +16,16 @@ export default function Header() {
   const { t } = useLanguage();
   const path = usePathname();
   const { user, ready, logout, isAdmin } = useAuth();
+  const [logoutBusy, setLogoutBusy] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
+  async function handleLogout() {
+    if (logoutBusy) return;
+    setLogoutBusy(true);
+    setLogoutError("");
+    try { await logout(); }
+    catch (err) { setLogoutError(err.message || "Не удалось выйти. Попробуйте ещё раз."); }
+    finally { setLogoutBusy(false); }
+  }
   const { balance, ready: walletReady } = useWallet();
   const { unreadCount, unreadMessages } = useRequests();
   const { cases = [], ready: supportReady } = useSupport();
@@ -43,7 +54,7 @@ export default function Header() {
               <Link href="/profile" aria-label={t("Мой профиль")} className="grid shrink-0 w-8 h-9 sm:w-9 sm:h-10 overflow-hidden bg-pu text-k border-2 border-ink place-items-center text-xs font-bold" title={user.name}>{user.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : user.name.slice(0, 2).toUpperCase()}</Link>
               <span className="hidden 2xl:inline max-w-[100px] truncate">{user.name}</span>
               <Link href="/profile" className="hidden sm:inline text-xs underline underline-offset-2">{t("Профиль")}</Link>
-              <button type="button" aria-label={t("Выйти")} title={t("Выйти")} className="grid place-items-center shrink-0 w-7 h-9 sm:w-auto sm:h-auto text-xs sm:underline underline-offset-2" onClick={logout}>
+              <button type="button" disabled={logoutBusy} aria-label={t("Выйти")} title={t("Выйти")} className="grid place-items-center shrink-0 w-7 h-9 sm:w-auto sm:h-auto text-xs sm:underline underline-offset-2 disabled:opacity-50" onClick={handleLogout}>
                 <svg className="sm:hidden" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 4H4v16h5M13 8l4 4-4 4M8 12h12" /></svg>
                 <span className="hidden sm:inline">{t("Выйти")}</span>
               </button>
@@ -53,6 +64,7 @@ export default function Header() {
         <div className="row-start-1 col-start-2 justify-self-end lg:shrink-0 [&_button]:min-h-8 lg:[&_button]:min-h-9"><LanguageSwitcher /></div>
       </div>
       <nav className="max-w-6xl mx-auto min-w-0 flex gap-1 px-3 sm:px-4 pb-1 text-[11px] sm:text-xs font-semibold overflow-x-auto">{links("")}</nav>
+      {logoutError && <p role="alert" className="max-w-6xl mx-auto px-4 py-2 text-sm text-red-700">{t(logoutError)}</p>}
     </header>
   );
 }

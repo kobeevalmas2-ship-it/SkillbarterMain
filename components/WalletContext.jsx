@@ -1,132 +1,94 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useAuth } from "./AuthContext";
-import { WALLET_KEY, DEMO_PARTICIPANTS, balanceFor, createTransfer, emptyLedger, ensureAccount, historyFor, normalizeEmail, readLedger } from "@/lib/wallet.mjs";
-import { allOffers, readCatalog, serviceQuote } from "@/lib/catalog.mjs";
-import { OFFERS } from "./data";
-import { availableBalanceFor, readActivity, reservedFor } from "@/lib/requests.mjs";
-import { readSupport } from "@/lib/support.mjs";
-import { readAvailability } from "@/lib/availability.mjs";
-import { isAdminActor, restoreSessionProfile } from "@/lib/admin-auth.mjs";
+import { balanceFor, emptyLedger, historyFor } from "@/lib/wallet.mjs";
+import { emptyCatalog } from "@/lib/catalog.mjs";
+import { availableBalanceFor, reservedFor } from "@/lib/requests.mjs";
+import { apiRequest } from "@/lib/api.mjs";
 
 const WalletContext = createContext(null);
-
-// Web Locks serialize read/check/write across tabs of this local demo.
-function withWalletLock(action) {
-  if (navigator.locks) return navigator.locks.request(WALLET_KEY, action);
-  return Promise.reject(new Error("Для операций с кошельком откройте сайт в современном браузере через localhost или HTTPS."));
-}
-
-function readParticipants(ledger) {
-  const registered = JSON.parse(localStorage.getItem("skillbarter-users") || "[]");
-  return [...new Map([...DEMO_PARTICIPANTS, ...ledger.accounts, ...registered].map((account) => [
-    normalizeEmail(account.email), { name: account.name, email: normalizeEmail(account.email) },
-  ])).values()];
-}
+const emptySnapshot = () => ({ ledger: emptyLedger(), participants: [], catalog: emptyCatalog(), reviews: [], busyIntervals: [] });
 
 export function WalletProvider({ children }) {
-  const { user, ready: authReady } = useAuth();
-  const [snapshot, setSnapshot] = useState({ ledger: emptyLedger(), participants: [], owner: null });
+  const { user, ready: authReady, refresh: refreshAuth } = useAuth();
+  const owner = user?.id || user?.email || null;
+  const [snapshot, setSnapshot] = useState(() => ({ ...emptySnapshot(), owner: undefined, loaded: false }));
   const [error, setError] = useState("");
+  const currentOwner = useRef(owner);
+  currentOwner.current = owner;
+  const sequence = useRef(0);
+  const pending = useRef(0);
+  const queue = useRef(Promise.resolve());
 
   const refresh = useCallback(async () => {
-    if (!user) {
-      setSnapshot({ ledger: emptyLedger(), participants: [], owner: null });
-      setError("");
-      return;
-    }
+    if (!authReady || pending.current) return;
+    const current = ++sequence.current;
     try {
-      await withWalletLock(() => {
-        const previous = readLedger(localStorage);
-        readActivity(previous);
-        readSupport(previous);
-        readAvailability(previous);
-        const ledger = ensureAccount(previous, user);
-        const participants = readParticipants(ledger);
-        if (ledger !== previous) localStorage.setItem(WALLET_KEY, JSON.stringify(ledger));
-        setSnapshot({ ledger, participants, owner: user.email });
-        setError("");
-      });
+      const result = await apiRequest("/api/state");
+      if (currentOwner.current !== owner || sequence.current !== current || pending.current) return;
+      if (result.actorId !== owner) {
+        setSnapshot({ ...emptySnapshot(), owner: undefined, loaded: false });
+        setError("Аккаунт изменился. Обновляем данные.");
+        await refreshAuth();
+        return;
+      }
+      setSnapshot({ ...emptySnapshot(), ...result, owner, loaded: true });
+      setError("");
     } catch (err) {
-      setError(err.message || "Не удалось открыть кошелёк. Разрешите сохранение данных в браузере.");
+      if (currentOwner.current !== owner || sequence.current !== current) return;
+      setError(err.message);
+      setSnapshot((previous) => ({ ...(previous.owner === owner ? previous : emptySnapshot()), owner, loaded: true }));
     }
-  }, [user]);
+  }, [authReady, owner, refreshAuth]);
 
   useEffect(() => {
+    sequence.current += 1;
+    setError("");
     if (!authReady) return;
-    refresh();
-    const onStorage = (event) => {
-      if (!event.key || [WALLET_KEY, "skillbarter-users"].includes(event.key)) refresh();
-    };
-    window.addEventListener("storage", onStorage);
+    if (pending.current) queue.current.finally(refresh).catch(() => {});
+    else refresh();
+    const timer = window.setInterval(refresh, 15000);
     window.addEventListener("focus", refresh);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("focus", refresh);
-    };
+    return () => { sequence.current += 1; window.clearInterval(timer); window.removeEventListener("focus", refresh); };
   }, [authReady, refresh]);
 
-  const mutateLedger = useCallback(async (update) => {
-    if (!user) throw new Error("Войдите в аккаунт для перевода.");
-    return withWalletLock(() => {
-      const session = JSON.parse(localStorage.getItem("skillbarter-session") || "null");
-      const accounts = JSON.parse(localStorage.getItem("skillbarter-users") || "[]");
-      const verified = restoreSessionProfile(accounts, session);
-      if (verified?.email !== user.email || isAdminActor(verified) !== isAdminActor(user)) {
-        throw new Error("Аккаунт изменился. Обновите страницу и войдите снова.");
+  const mutate = useCallback((action, values = {}, id) => {
+    if (!user) return Promise.reject(new Error("Войдите в аккаунт."));
+    pending.current += 1;
+    sequence.current += 1;
+    const operation = queue.current.catch(() => {}).then(async () => {
+      if (currentOwner.current !== owner) throw new Error("Аккаунт изменился. Повторите действие.");
+      const result = await apiRequest("/api/state", { method: "POST", body: { action, values, id, expectedActorId: user.id } });
+      if (currentOwner.current !== owner) throw new Error("Аккаунт изменился. Обновите страницу.");
+      if (result.actorId !== owner) {
+        setSnapshot({ ...emptySnapshot(), owner: undefined, loaded: false });
+        await refreshAuth();
+        throw new Error("Аккаунт изменился. Повторите действие.");
       }
-      const previous = readLedger(localStorage);
-      readActivity(previous);
-      readSupport(previous);
-      readAvailability(previous);
-      const next = update(ensureAccount(previous, user));
-      readActivity(next);
-      readSupport(next);
-      readAvailability(next);
-      if (next !== previous) {
-        const participants = readParticipants(next);
-        // Requests, messages, reservations and both balances commit in one write.
-        localStorage.setItem(WALLET_KEY, JSON.stringify(next));
-        setSnapshot({ ledger: next, participants, owner: user.email });
-      }
+      setSnapshot({ ...emptySnapshot(), ...result, owner, loaded: true });
       setError("");
-      return next;
-    });
-  }, [user]);
+      return result;
+    }).finally(() => { pending.current -= 1; });
+    queue.current = operation;
+    return operation;
+  }, [owner, user, refreshAuth]);
 
-  async function transfer(values) {
-    const next = await mutateLedger((current) => {
-      if (values.offerId) {
-        const offer = allOffers(readCatalog(localStorage), OFFERS).find((item) => item.id === values.offerId);
-        const quote = serviceQuote(offer, values.minutes);
-        if (quote.to !== values.to || quote.note !== values.note || values.type !== "service") throw new Error("Условия услуги изменились. Обновите страницу и проверьте оплату.");
-      }
-      let ledger = current;
-      const participants = readParticipants(ledger);
-      const recipient = participants.find((account) => account.email === normalizeEmail(values.to));
-      if (!recipient) throw new Error("Участник с такой почтой не найден. Выберите получателя из списка.");
-      ledger = ensureAccount(ledger, recipient);
-      if (!ledger.transactions.some((tx) => tx.id === values.id) && values.minutes > availableBalanceFor(ledger, user.email)) {
-        throw new Error("Часть минут зарезервирована для занятий. Уменьшите сумму перевода.");
-      }
-      ledger = createTransfer(ledger, { ...values, from: user.email });
-      return ledger;
-    });
-    return next.transactions.find((tx) => tx.id === values.id);
-  }
+  const transfer = useCallback(async (values) => {
+    const result = await mutate("wallet.transfer", values, values.id);
+    return result.ledger.transactions.find((transaction) => transaction.id === values.id);
+  }, [mutate]);
 
-  const ready = authReady && (!user || snapshot.owner === user.email) && !error;
-  const ledger = snapshot.owner === user?.email ? snapshot.ledger : emptyLedger();
-  return <WalletContext.Provider value={{ ready, error, refresh, transfer, mutateLedger, ledger,
+  const data = snapshot.owner === owner ? snapshot : emptySnapshot();
+  const { ledger } = data;
+  const ready = authReady && snapshot.owner === owner && snapshot.loaded;
+  return <WalletContext.Provider value={{ ...data, ready, error, refresh, transfer, mutate,
     balance: user ? availableBalanceFor(ledger, user.email) : 0,
     totalBalance: user ? balanceFor(ledger, user.email) : 0,
     reserved: user ? reservedFor(ledger, user.email) : 0,
     history: user ? historyFor(ledger, user.email) : [],
-    participants: snapshot.participants.filter((account) => account.email !== user?.email),
+    participants: data.participants.filter((account) => account.email !== user?.email),
   }}>{children}</WalletContext.Provider>;
 }
 
-export function useWallet() {
-  return useContext(WalletContext);
-}
+export function useWallet() { return useContext(WalletContext); }

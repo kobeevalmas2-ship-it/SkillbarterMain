@@ -1,85 +1,71 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
-import { ensureAdminAccount, isAdminActor, profileFromAccount, registeredAccount, restoreSessionProfile, startAccountSession, updateAccountProfile } from "@/lib/admin-auth.mjs";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { apiRequest } from "@/lib/api.mjs";
 
 const AuthContext = createContext(null);
-const USERS_KEY = "skillbarter-users";
-const SESSION_KEY = "skillbarter-session";
-
-function readUsers() {
-  const previous = JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
-  const users = ensureAdminAccount(previous);
-  if (users !== previous) localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  return users;
-}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
+  const [configured, setConfigured] = useState(true);
+  const [error, setError] = useState("");
+  const sequence = useRef(0);
 
-  useEffect(() => {
-    function restoreSession() {
-      try {
-        const users = readUsers();
-        const session = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
-        setUser(restoreSessionProfile(users, session));
-      } catch {
-        setUser(null);
-      }
-      setReady(true);
+  const refresh = useCallback(async () => {
+    const current = ++sequence.current;
+    try {
+      const result = await apiRequest("/api/auth");
+      if (current !== sequence.current) return;
+      setUser((previous) => JSON.stringify(previous) === JSON.stringify(result.user) ? previous : result.user);
+      setConfigured(result.configured !== false);
+      setError(result.configured === false ? "Supabase ещё не настроен. Укажите параметры подключения на сервере." : "");
+    } catch (err) {
+      if (current === sequence.current) setError(err.message);
+    } finally {
+      if (current === sequence.current) setReady(true);
     }
-    restoreSession();
-    const onStorage = (event) => {
-      if (!event.key || event.key === SESSION_KEY || event.key === USERS_KEY) restoreSession();
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  function register(values) {
-    const users = readUsers();
-    const account = registeredAccount(values, crypto.randomUUID());
-    if (users.some((item) => item.email.trim().toLowerCase() === account.email)) {
-      throw new Error("Этот адрес электронной почты уже зарегистрирован. Войдите в аккаунт.");
+  useEffect(() => {
+    refresh();
+    window.addEventListener("focus", refresh);
+    return () => { sequence.current += 1; window.removeEventListener("focus", refresh); };
+  }, [refresh]);
+
+  async function authenticate(action, values) {
+    sequence.current += 1;
+    const result = await apiRequest("/api/auth", { method: "POST", body: { action, values } });
+    sequence.current += 1;
+    setUser(result.user);
+    setError("");
+    setReady(true);
+    return result.user;
+  }
+
+  async function updateProfile(changes) {
+    const result = await apiRequest("/api/auth", { method: "PATCH", body: changes, headers: { "X-Skillbarter-Actor": user?.id || "" } });
+    sequence.current += 1;
+    setUser(result.user);
+    setError("");
+    return result.user;
+  }
+
+  async function logout() {
+    try {
+      await apiRequest("/api/auth", { method: "DELETE", headers: { "X-Skillbarter-Actor": user?.id || "" } });
+      sequence.current += 1;
+      setUser(null);
+      setError("");
+    } catch (err) {
+      setError(err.message);
+      throw err;
     }
-    localStorage.setItem(USERS_KEY, JSON.stringify([...users, account]));
-    const profile = profileFromAccount(account);
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...profile, token: account.sessionToken }));
-    setUser(profile);
-    return profile;
   }
 
-  function login(values) {
-    const result = startAccountSession(readUsers(), values, crypto.randomUUID());
-    localStorage.setItem(USERS_KEY, JSON.stringify(result.users));
-    localStorage.setItem(SESSION_KEY, JSON.stringify(result.session));
-    setUser(result.profile);
-    return result.profile;
-  }
-
-  function updateProfile(changes) {
-    if (!user) throw new Error("Войдите в аккаунт.");
-    const users = readUsers();
-    const session = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
-    const current = restoreSessionProfile(users, session);
-    if (current?.email !== user.email) throw new Error("Аккаунт изменился. Обновите страницу и войдите снова.");
-    const account = users.find((item) => item.email.trim().toLowerCase() === user.email);
-    const updated = updateAccountProfile(account, changes);
-    const profile = profileFromAccount(updated);
-    localStorage.setItem(USERS_KEY, JSON.stringify(users.map((item) => item === account ? updated : item)));
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...profile, token: updated.sessionToken }));
-    setUser(profile);
-  }
-
-  function logout() {
-    localStorage.removeItem(SESSION_KEY);
-    setUser(null);
-  }
-
-  return <AuthContext.Provider value={{ user, ready, register, login, logout, updateProfile, isAdmin: isAdminActor(user) }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, ready, configured, error, refresh,
+    register: (values) => authenticate("register", values), login: (values) => authenticate("login", values),
+    logout, updateProfile, isAdmin: user?.role === "admin" }}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export function useAuth() { return useContext(AuthContext); }

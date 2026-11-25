@@ -14,15 +14,17 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const { login, register } = useAuth();
+  const { login, register, ready, configured, error: authError } = useAuth();
   const router = useRouter();
   const form = useRef(null);
 
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
     if (busy) return;
     setError("");
+    setMessage("");
     const values = Object.fromEntries(new FormData(event.currentTarget));
     const nextErrors = {};
     if (isRegister && (values.name.trim().length < 2 || values.name.trim().length > 50)) nextErrors.name = "Имя должно содержать от 2 до 50 символов.";
@@ -35,7 +37,12 @@ export default function LoginPage() {
     }
     setBusy(true);
     try {
-      const profile = isRegister ? register(values) : login(values);
+      const profile = await (isRegister ? register(values) : login(values));
+      if (!profile) {
+        setMessage("Проверьте почту: мы отправили ссылку для подтверждения регистрации. После подтверждения войдите в аккаунт.");
+        setBusy(false);
+        return;
+      }
       const next = new URLSearchParams(window.location.search).get("next");
       router.push(next ? safeAuthNext(next) : profile.role === "admin" ? "/admin" : "/day");
     } catch (err) {
@@ -62,6 +69,7 @@ export default function LoginPage() {
         <p className="mt-2 text-ink/65">{t(isRegister ? "Присоединяйтесь к сообществу SkillBarter." : "Войдите в аккаунт.")}</p>
         <form ref={form} onSubmit={submit} noValidate aria-busy={busy} className="grid gap-4 mt-7" onChange={(event) => {
           setError("");
+          setMessage("");
           const name = event.target.name;
           setErrors((current) => {
             const next = { ...current };
@@ -81,11 +89,12 @@ export default function LoginPage() {
             {isRegister && <p id="password-help" className="text-xs font-normal text-ink/65">{t("Используйте не менее 6 символов. Лучше выбрать уникальный пароль.")}</p>}
             {fieldError("password")}
           </div>
-          {error && <p role="alert" className="border-2 border-red-700 bg-red-50 text-red-800 p-3 text-sm">{t(error)}</p>}
-          <button className="btn bg-y mt-1 disabled:opacity-50" type="submit" disabled={busy}>{t(busy ? "Подождите…" : isRegister ? "Зарегистрироваться" : "Войти")}</button>
+          {(error || authError) && <p role="alert" className="border-2 border-red-700 bg-red-50 text-red-800 p-3 text-sm">{t(error || authError)}</p>}
+          {message && <p role="status" className="border-2 border-green-700 bg-green-50 text-green-900 p-3 text-sm">{t(message)}</p>}
+          <button className="btn bg-y mt-1 disabled:opacity-50" type="submit" disabled={busy || !ready || !configured}>{t(busy || !ready ? "Подождите…" : isRegister ? "Зарегистрироваться" : "Войти")}</button>
         </form>
         <p className="mt-6 text-sm text-center">{t(isRegister ? "Уже есть аккаунт?" : "Нет аккаунта?")}{" "}
-          <button className="font-bold underline underline-offset-2" type="button" disabled={busy} onClick={() => { setIsRegister(!isRegister); setShowPassword(false); setErrors({}); setError(""); }}>{t(isRegister ? "Войти" : "Зарегистрироваться")}</button>
+          <button className="font-bold underline underline-offset-2" type="button" disabled={busy} onClick={() => { setIsRegister(!isRegister); setShowPassword(false); setErrors({}); setError(""); setMessage(""); }}>{t(isRegister ? "Войти" : "Зарегистрироваться")}</button>
         </p>
       </div>
     </section>

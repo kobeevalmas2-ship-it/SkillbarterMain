@@ -22,6 +22,7 @@ export default function ProfilePage() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [saved, setSaved] = useState(null);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [restored, setRestored] = useState(false);
   const [draftError, setDraftError] = useState(false);
   const fileReader = useRef(null);
@@ -137,19 +138,20 @@ export default function ProfilePage() {
     reader.readAsDataURL(file);
   }
 
-  function save(event) {
+  async function save(event) {
     event.preventDefault();
     setError("");
     setMessage("");
-    if (photoBusy) return;
+    if (photoBusy || saving) return;
     if (name.trim().length < 2 || name.trim().length > 50) { setFieldErrors((previous) => ({ ...previous, name: "Имя должно содержать от 2 до 50 символов." })); event.currentTarget.elements.namedItem("name")?.focus(); return; }
     const next = nextSkills();
     if (!next) { event.currentTarget.elements.namedItem("skill")?.focus(); return; }
+    setSaving(true);
     try {
       const changes = {
         name: name.trim(), city: city.trim(), about: about.trim(), skills: next, avatar,
       };
-      updateProfile(changes);
+      await updateProfile(changes);
       try { clearProfileDraft(sessionStorage, user.email); } catch { /* The saved baseline prevents restoring a stale draft. */ }
       setSaved(JSON.stringify(changes));
       setSkillInput("");
@@ -158,6 +160,8 @@ export default function ProfilePage() {
       setRestored(false);
     } catch (saveError) {
       setError(saveError.message || "Не удалось сохранить профиль.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -170,7 +174,8 @@ export default function ProfilePage() {
         <h1 className="font-head font-extrabold text-4xl mt-2">{t("Мой профиль")}</h1>
         <p className="text-ink/65 mt-2">{t("Добавьте информацию о себе, чтобы другим участникам было проще с вами познакомиться.")}</p>
       </div>
-      <form onSubmit={save} noValidate className="grid md:grid-cols-[220px_1fr] gap-6 items-start">
+      <form onSubmit={save} noValidate aria-busy={saving} className="grid md:grid-cols-[220px_1fr] gap-6 items-start">
+        <fieldset disabled={saving} className="contents">
         <aside className="bg-card border-2 border-ink p-5 sh">
           <div className="w-36 h-36 mx-auto border-2 border-ink bg-pu grid place-items-center overflow-hidden text-4xl font-bold">
             {avatar ? <img src={avatar} alt={t("Фото профиля")} className="w-full h-full object-cover" /> : name.slice(0, 2).toUpperCase()}
@@ -205,9 +210,10 @@ export default function ProfilePage() {
           {message && <p role="status" className="border-2 border-green-700 bg-green-50 text-green-900 p-3 text-sm mt-5">{t(message)}</p>}
           {dirty && <p role="status" className="text-sm text-ink/70 mt-5">{t("Есть несохранённые изменения.")}</p>}
           {draftError && <p role="alert" className="text-sm text-red-700 mt-3">{t("Не удалось сохранить черновик профиля в этой вкладке. Сохраните изменения перед выходом.")}</p>}
-          <button className="btn bg-y mt-6 disabled:opacity-50" type="submit" disabled={photoBusy}>{t(photoBusy ? "Подождите…" : "Сохранить изменения")}</button>
+          <button className="btn bg-y mt-6 disabled:opacity-50" type="submit" disabled={photoBusy || saving}>{t(photoBusy || saving ? "Подождите…" : "Сохранить изменения")}</button>
           {dirty && <button type="button" className="mt-6 ml-4 text-sm font-semibold underline underline-offset-2" onClick={discardChanges}>{t("Отменить изменения")}</button>}
         </div>
+        </fieldset>
       </form>
     </section>
   );

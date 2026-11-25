@@ -162,7 +162,7 @@ function WalletDashboard({ user, initialRecipient, initialMinutes, initialServic
         <div role="status" aria-live="polite">
           {success && <p className="mt-4 border-2 border-ink bg-lb text-k p-3 text-sm break-words"><b>{t("Перевод выполнен!")}</b><br />{t("{minutes} мин → {name}. Операция сохранена в истории.", { minutes: success.minutes, name: participantName(success.to) })}</p>}
         </div>
-        <p className="border-t-2 border-ink pt-4 mt-5 text-xs text-ink/60 leading-relaxed">{t("Участники с почтой @skillbarter.local — демонстрационные авторы услуг. Для перевода знакомому он должен зарегистрироваться в этом браузере.")}</p>
+        <p className="border-t-2 border-ink pt-4 mt-5 text-xs text-ink/60 leading-relaxed">{t("Для перевода выберите зарегистрированного участника. Получатель увидит минуты в своём аккаунте.")}</p>
       </section>
 
       <section className="min-w-0" aria-labelledby="history-title">
@@ -202,6 +202,6 @@ function WalletDashboard({ user, initialRecipient, initialMinutes, initialServic
         <Link href="/find" className="inline-block font-semibold text-sm underline underline-offset-4 mt-6">{t("Найти помощь и потратить минуты ↗")}</Link>
       </section>
     </div>
-    <p className="text-xs text-ink/55 border-t-2 border-ink mt-10 pt-4">{t("Демонстрационный кошелёк: баланс и история хранятся только в этом браузере и не синхронизируются между устройствами.")}</p>
+    <p className="text-xs text-ink/55 border-t-2 border-ink mt-10 pt-4">{t("Баланс и история сохраняются в вашем аккаунте и доступны на других устройствах после входа.")}</p>
   </div>;
 }
