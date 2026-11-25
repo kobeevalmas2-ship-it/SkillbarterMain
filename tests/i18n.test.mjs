@@ -77,13 +77,13 @@ test("the translation API switches language and interpolates every declared mess
 
 test("the updated user journeys declare translations for their static interface text", () => {
   for (const file of [
-    "app/page.js", "app/find/FindClient.js", "components/OfferCard.js",
-    "components/NewOfferModal.js", "app/login/page.js", "app/profile/page.js",
-    "app/day/page.js", "app/notifications/page.js", "app/requests/page.js", "app/requests/[id]/page.js",
-    "app/admin/page.js", "app/support/page.js", "app/support/[id]/page.js", "components/SupportPanel.js", "components/SupportContext.js",
-    "components/ThemeSwitcher.js", "components/LoadingState.js", "components/Header.js",
-    "app/availability/page.js", "components/AvailabilityEditor.js", "components/AvailabilityPicker.js", "components/DateCalendar.js", "app/services/page.js",
-    ...readdirSync(new URL("../components/", import.meta.url)).filter((name) => /^Request.*\.js$/.test(name)).map((name) => `components/${name}`),
+    "app/page.jsx", "app/find/FindClient.jsx", "components/OfferCard.jsx",
+    "components/NewOfferModal.jsx", "app/login/page.jsx", "app/profile/page.jsx",
+    "app/day/page.jsx", "app/notifications/page.jsx", "app/requests/page.jsx", "app/requests/[id]/page.jsx",
+    "app/admin/page.jsx", "app/support/page.jsx", "app/support/[id]/page.jsx", "components/SupportPanel.jsx", "components/SupportContext.jsx",
+    "components/ThemeSwitcher.jsx", "components/LoadingState.jsx", "components/Header.jsx",
+    "app/availability/page.jsx", "components/AvailabilityEditor.jsx", "components/AvailabilityPicker.jsx", "components/DateCalendar.jsx", "app/services/page.jsx",
+    ...readdirSync(new URL("../components/", import.meta.url)).filter((name) => /^Request.*\.jsx$/.test(name)).map((name) => `components/${name}`),
   ]) {
     const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
     for (const match of source.matchAll(/\bt\(("(?:[^"\\]|\\.)*")/g)) {
