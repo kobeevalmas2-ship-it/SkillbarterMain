@@ -1,0 +1,10 @@
+node_modules
+.next
+.next-ux-check
+.git
+.env
+.env.*
+!.env.example
+.tmp
+data
+supabase/.temp

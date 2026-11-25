@@ -20,7 +20,7 @@
 
    Для старых ключей поддерживаются `NEXT_PUBLIC_SUPABASE_ANON_KEY` и `SUPABASE_SERVICE_ROLE_KEY`. Серверный ключ используется только в Next.js API; `.env.local` исключён из Git.
 
-4. В **Authentication → URL Configuration** укажите Site URL для вашего сайта, локально — `http://localhost:3000`. При включённом подтверждении почты после регистрации подтвердите адрес по письму, затем войдите.
+4. В **Authentication → URL Configuration** укажите Site URL для вашего сайта, локально — `http://localhost:3000`. Добавьте `http://localhost:3000/auth/callback**` в Redirect URLs. Для рабочего сайта используйте адрес Vercel из раздела ниже. При включённом подтверждении почты приложение обработает ссылку из письма и установит серверную сессию.
 5. Установите зависимости и проверьте доступ к базе:
 
    ```bash
@@ -32,6 +32,28 @@
 `db:check` проверяет ключи, Auth и доступность таблиц `profiles` и `application_state`. Для проверки таблиц просмотра после применения всех миграций выполните `npm run db:check -- --reports`. Команда только читает данные и не выводит ключи или содержимое базы. После изменения `.env.local` перезапустите сервер.
 
 Откройте [http://localhost:3000](http://localhost:3000). Для рабочего запуска выполните `npm run build`, затем `npm start`. На хостинге задайте те же переменные окружения и Site URL с адресом опубликованного сайта.
+
+## Публикация на Vercel и подтверждение почты
+
+1. Сохраните изменения проекта в GitHub. В [Vercel → New Project](https://vercel.com/new) импортируйте репозиторий `kobeevalmas2-ship-it/SkillbarterMain`. Выберите **Next.js**, корень репозитория и **Node.js 22.x**. Команда сборки — `npm run build`, установка — `npm ci`; каталог результата Next.js определит автоматически. Не используйте статический экспорт: авторизация и работа с Supabase требуют серверных API.
+2. В **Settings → Environment Variables** добавьте для Production:
+
+   | Переменная | Значение |
+   |---|---|
+   | `NEXT_PUBLIC_SUPABASE_URL` | URL существующего проекта Supabase |
+   | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable key этого проекта |
+   | `SUPABASE_SECRET_KEY` | Secret key; только серверная переменная, без префикса `NEXT_PUBLIC_` |
+   | `SITE_URL` | Постоянный адрес сайта, например `https://your-project.vercel.app`, без пути |
+
+   Старые названия ключей из `.env.example` также поддерживаются. Не копируйте ключи в Git и не передавайте их в адресе страницы. `.env.local` не загружается автоматически из вашего компьютера. Если `SITE_URL` ещё не задан, приложение использует системную переменную Vercel `VERCEL_PROJECT_PRODUCTION_URL` (затем `VERCEL_URL`).
+3. Запустите **Deploy**. В **Settings → Domains** скопируйте постоянный production-домен. Не используйте одноразовый адрес отдельной сборки для писем подтверждения.
+4. В Supabase **Authentication → URL Configuration** установите **Site URL** равным production-адресу Vercel и добавьте в **Redirect URLs** `https://your-project.vercel.app/auth/callback**`. Узкое окончание `**` разрешает параметры возврата после подтверждения. Для локальной разработки можно дополнительно оставить `http://localhost:3000/auth/callback**`. Не добавляйте общий шаблон для всех `*.vercel.app`.
+5. В Supabase **Authentication → Email Templates → Confirm signup** оставьте стандартную ссылку `{{ .ConfirmationURL }}`. Приложение передаёт `emailRedirectTo` с адресом `/auth/callback`; сервер проверяет полученную сессию и сохраняет её в httpOnly cookies. Для этого потока не заменяйте ссылку на `token_hash` или PKCE-код без изменения обработчика приложения.
+6. Если изменили переменные окружения, сделайте **Redeploy**. Зарегистрируйте тестовый аккаунт с production-сайта и откройте **новое письмо**: старые письма с `localhost` сами не меняются. После подтверждения приложение вернёт пользователя к исходному действию либо в `/day`.
+
+Невалидная или просроченная ссылка показывает сообщение и переход на вход. Callback удаляет фрагмент с токенами из адресной строки и не выводит его в журнал. Для реального теста отправки письма нужны доступ к вашему Supabase и его почтовые настройки; локальные тесты не подтверждают доставку писем.
+
+Документация: [Vercel: Git deployment](https://vercel.com/docs/git), [Vercel: environment variables](https://vercel.com/docs/environment-variables), [Supabase: redirect URLs](https://supabase.com/docs/guides/auth/redirect-urls).
 
 Аккаунты и операции из прежнего `localStorage` автоматически не переносятся в Supabase. Создайте новые аккаунты с настоящими адресами электронной почты. Старые демонстрационные пароли не используются, тестовые услуги не добавляются в рабочий каталог.
 

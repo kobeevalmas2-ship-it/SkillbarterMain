@@ -5,4 +5,5 @@ node_modules
 !.env.example
 data/
 supabase/.temp/
+.vercel/
 .tmp/

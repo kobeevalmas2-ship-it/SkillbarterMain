@@ -16,14 +16,15 @@ const inter = Inter({ subsets: ["latin", "cyrillic"], variable: "--font-inter" }
 const head = Inter_Tight({ subsets: ["latin", "cyrillic"], weight: ["600", "800"], variable: "--font-head" });
 const mono = JetBrains_Mono({ subsets: ["latin", "cyrillic"], variable: "--font-mono" });
 
-export function generateMetadata() {
-  const language = normalizeLanguage(cookies().get(LANGUAGE_COOKIE)?.value);
+export async function generateMetadata() {
+  const language = normalizeLanguage((await cookies()).get(LANGUAGE_COOKIE)?.value);
   return { title: "SkillBarter", description: translate(language, "Обмен навыками за время") };
 }
 
-export default function RootLayout({ children }) {
-  const language = normalizeLanguage(cookies().get(LANGUAGE_COOKIE)?.value);
-  const savedTheme = cookies().get("skillbarter-theme")?.value;
+export default async function RootLayout({ children }) {
+  const jar = await cookies();
+  const language = normalizeLanguage(jar.get(LANGUAGE_COOKIE)?.value);
+  const savedTheme = jar.get("skillbarter-theme")?.value;
   const theme = ["light", "dark", "system"].includes(savedTheme) ? savedTheme : "system";
   return (
     <html lang={language} data-theme={theme} className={`${inter.variable} ${head.variable} ${mono.variable}`}>

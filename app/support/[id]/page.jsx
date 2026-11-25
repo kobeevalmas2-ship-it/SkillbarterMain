@@ -1,17 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthContext";
 import { useLanguage } from "@/components/LanguageContext";
 import { useSupport } from "@/components/SupportContext";
 import { SUPPORT_ACTIONS, SupportGate, SupportStatus, supportDate } from "@/components/SupportPanel";
 
-export default function SupportDetailPage({ params }) {
+export default function SupportDetailPage() {
+  const { id } = useParams();
   const { t, locale } = useLanguage();
   const { user, ready: authReady, isAdmin } = useAuth();
   const { cases = [], ready, error, refresh, getCaseMessages, sendCaseMessage, markCaseRead } = useSupport();
-  const complaint = cases.find((item) => item.id === params.id);
+  const complaint = cases.find((item) => item.id === id);
   const messages = complaint ? getCaseMessages(complaint.id) : [];
   const canReply = complaint && ["open", "reviewing"].includes(complaint.status);
   const email = user?.email;
@@ -25,7 +27,7 @@ export default function SupportDetailPage({ params }) {
   const readAttempt = useRef("");
   const chat = useRef(null);
 
-  useEffect(() => { setText(""); setSendError(""); setReadError(""); setAnnouncement(""); readAttempt.current = ""; }, [params.id, email]);
+  useEffect(() => { setText(""); setSendError(""); setReadError(""); setAnnouncement(""); readAttempt.current = ""; }, [id, email]);
   useEffect(() => {
     if (!complaint?.id || !email || !ready || error) return;
     const key = `${email}:${complaint.id}:${unreadKey}`;
@@ -35,7 +37,7 @@ export default function SupportDetailPage({ params }) {
     Promise.resolve().then(() => markCaseRead(complaint.id)).then(() => { if (active) setReadError(""); }).catch((err) => { if (active) setReadError(err.message || "Не удалось отметить переписку прочитанной."); });
     return () => { active = false; };
   }, [complaint?.id, email, ready, error, unreadKey, markCaseRead]);
-  useEffect(() => { if (chat.current) chat.current.scrollTop = chat.current.scrollHeight; }, [params.id, messages.length]);
+  useEffect(() => { if (chat.current) chat.current.scrollTop = chat.current.scrollHeight; }, [id, messages.length]);
 
   async function submit(event) {
     event.preventDefault();
@@ -53,7 +55,7 @@ export default function SupportDetailPage({ params }) {
     catch (err) { setReadError(err.message || "Не удалось отметить переписку прочитанной."); }
   }
 
-  return <SupportGate {...{ user, authReady, ready, error, refresh }} next={`/support/${params.id}`}>
+  return <SupportGate {...{ user, authReady, ready, error, refresh }} next={`/support/${id}`}>
     {!complaint ? <section className="max-w-3xl mx-auto px-4 py-14"><div className="border-2 border-ink bg-card p-8"><h1 className="font-head font-extrabold text-3xl">{t("Обращение не найдено")}</h1><p className="text-ink/65 mt-4">{t("Оно недоступно этому аккаунту или было удалено.")}</p><Link href="/support" className="btn bg-y inline-block mt-6">{t("Все обращения ←")}</Link></div></section> : <section className="max-w-6xl mx-auto px-4 py-5 md:py-8">
       <Link href="/support" className="text-sm underline underline-offset-4">{t("← Все обращения")}</Link>
       <div className="flex flex-wrap gap-4 justify-between items-center mt-4"><div className="min-w-0"><span className="lbl text-acc">{t("Чат с поддержкой")}</span><h1 className="font-head font-extrabold text-2xl md:text-3xl mt-1 break-words">{complaint.title}</h1></div><SupportStatus status={complaint.status} /></div>

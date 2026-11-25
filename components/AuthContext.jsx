@@ -65,6 +65,7 @@ export function AuthProvider({ children }) {
 
   return <AuthContext.Provider value={{ user, ready, configured, error, refresh,
     register: (values) => authenticate("register", values), login: (values) => authenticate("login", values),
+    confirmEmail: (values) => authenticate("confirm", values),
     logout, updateProfile, isAdmin: user?.role === "admin" }}>{children}</AuthContext.Provider>;
 }
 

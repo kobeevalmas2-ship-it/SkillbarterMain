@@ -37,9 +37,11 @@ export default function LoginPage() {
     }
     setBusy(true);
     try {
+      const requestedNext = new URLSearchParams(window.location.search).get("next");
+      values.next = safeAuthNext(requestedNext || "/day");
       const profile = await (isRegister ? register(values) : login(values));
       if (!profile) {
-        setMessage("Проверьте почту: мы отправили ссылку для подтверждения регистрации. После подтверждения войдите в аккаунт.");
+        setMessage("Проверьте почту: откройте ссылку из письма, чтобы подтвердить адрес и продолжить.");
         setBusy(false);
         return;
       }

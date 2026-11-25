@@ -19,11 +19,12 @@ import calendarUi from "../lib/translations-calendar-ui.mjs";
 import availabilityCore from "../lib/translations-availability-core.mjs";
 import availabilityEditor from "../lib/translations-availability-editor.mjs";
 import availabilityPicker from "../lib/translations-availability-picker.mjs";
+import authConfirmation from "../lib/translations-auth-confirmation.mjs";
 import { REQUEST_STATUS_LABELS } from "../lib/requests.mjs";
 import { SUPPORT_STATUS_LABELS } from "../lib/support.mjs";
 import { emptyCatalog, readCatalog, saveOffer, CATALOG_KEY } from "../lib/catalog.mjs";
 
-const dictionaries = { common, catalog, account, homeUx, searchUx, profileUx, offerEditor, appearance, workflowUi, workflowCore, supportUi, adminUi, supportCore, calendarUi, availabilityCore, availabilityEditor, availabilityPicker };
+const dictionaries = { common, catalog, account, homeUx, searchUx, profileUx, offerEditor, appearance, workflowUi, workflowCore, supportUi, adminUi, supportCore, calendarUi, availabilityCore, availabilityEditor, availabilityPicker, authConfirmation };
 const entries = Object.assign({}, ...Object.values(dictionaries));
 const placeholders = (message) => [...new Set([...message.matchAll(/\{(\w+)\}/g)].map((match) => match[1]))].sort();
 
@@ -83,6 +84,7 @@ test("the updated user journeys declare translations for their static interface 
     "app/admin/page.jsx", "app/support/page.jsx", "app/support/[id]/page.jsx", "components/SupportPanel.jsx", "components/SupportContext.jsx",
     "components/ThemeSwitcher.jsx", "components/LoadingState.jsx", "components/Header.jsx",
     "app/availability/page.jsx", "components/AvailabilityEditor.jsx", "components/AvailabilityPicker.jsx", "components/DateCalendar.jsx", "app/services/page.jsx",
+    "app/auth/callback/page.jsx",
     ...readdirSync(new URL("../components/", import.meta.url)).filter((name) => /^Request.*\.jsx$/.test(name)).map((name) => `components/${name}`),
   ]) {
     const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthContext";
 import { useLanguage } from "@/components/LanguageContext";
@@ -20,11 +21,12 @@ const STATUS_HINTS = {
   refunded: "Минуты за это занятие возвращены заказчику решением администратора.",
 };
 
-export default function RequestDetailPage({ params }) {
+export default function RequestDetailPage() {
+  const { id } = useParams();
   const { t, locale } = useLanguage();
   const { user, ready: authReady, isAdmin } = useAuth();
   const { requests = [], notifications = [], getMessages, ready, error, refresh, sendMessage, markRequestRead } = useRequests();
-  const request = requests.find((item) => item.id === params.id);
+  const request = requests.find((item) => item.id === id);
   const messages = request ? getMessages(request.id) : [];
   const [text, setText] = useState("");
   const [sendError, setSendError] = useState("");
@@ -37,7 +39,7 @@ export default function RequestDetailPage({ params }) {
 
   useEffect(() => {
     setText(""); setSendError(""); setReadError(""); setAnnouncement("");
-  }, [params.id, user?.email]);
+  }, [id, user?.email]);
 
   useEffect(() => {
     if (!request || !needsRead) return;
@@ -46,7 +48,7 @@ export default function RequestDetailPage({ params }) {
 
   useEffect(() => {
     if (chatList.current) chatList.current.scrollTop = chatList.current.scrollHeight;
-  }, [params.id, messages.length]);
+  }, [id, messages.length]);
 
   async function submit(event) {
     event.preventDefault();
@@ -59,7 +61,7 @@ export default function RequestDetailPage({ params }) {
     finally { pending.current = false; setSending(false); }
   }
 
-  return <WorkflowGate {...{ user, authReady, ready, error, refresh }} next={`/requests/${params.id}`}>
+  return <WorkflowGate {...{ user, authReady, ready, error, refresh }} next={`/requests/${id}`}>
     {!request ? <section className="max-w-3xl mx-auto px-4 py-16"><h1 className="font-head font-extrabold text-4xl">{t("Заявка недоступна")}</h1><p className="text-ink/65 mt-4">{t("Проверьте ссылку и аккаунт. Заявку могут открыть только её участники.")}</p><Link href="/requests" className="btn bg-y inline-block mt-6">{t("К моим заявкам ↗")}</Link></section> : <section className="max-w-6xl mx-auto px-4 py-8 md:py-12">
       <Link href="/requests" className="text-sm font-semibold underline underline-offset-4">{t("← Все заявки")}</Link>
       <div className="flex flex-wrap items-start justify-between gap-5 mt-6"><div className="min-w-0 flex-1"><span className="lbl text-acc">{t("Ваш обмен навыками")}</span><h1 className="font-head font-extrabold text-4xl md:text-5xl mt-3 break-words">{request.title}</h1></div><RequestStatus status={request.status} /></div>
